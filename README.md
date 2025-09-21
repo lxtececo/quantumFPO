@@ -4,12 +4,19 @@
 ## Project Overview
 This project is a full-stack application for quantum-inspired financial portfolio optimization. It features a fast JavaScript frontend (React + Vite), a Spring Boot backend for RESTful services, and a Python microservice for advanced portfolio optimization using PyPortfolioOpt.
 
+
 ### Main Features
 - **User Login**: Secure login form for user authentication.
 - **Stock Data Loader**: Form to input up to three stock symbols and a Value at Risk (VaR) percentage.
 - **Historic Data Visualization**: Table and interactive chart displaying open, high, low, and close prices for each stock.
 - **Portfolio Optimization**: Backend service integrates with Python to compute optimal portfolio weights using mean-variance optimization (max Sharpe ratio).
 - **Mock Data Support**: Simulate stock data for development/testing using special stock symbols (e.g., SIM_APPL).
+
+---
+
+## Future Enhancements
+- Explore The variational quantum eigensolver (VQE) for financial optimization. [Learn more](https://qiskit.qotlabs.org/learning/courses/quantum-diagonalization-algorithms/vqe)
+- Explore Perform dynamic portfolio optimization with Global Data Quantum's Portfolio Optimizer. [Learn more](https://quantum.cloud.ibm.com/docs/en/tutorials/global-data-quantum-optimizer#perform-dynamic-portfolio-optimization-with-global-data-quantums-portfolio-optimizer)
 
 ---
 
