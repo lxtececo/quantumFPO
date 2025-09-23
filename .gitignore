@@ -14,6 +14,7 @@ backend/target/
 *.log
 *.tmp
 *.bak
+backend/src/main/resources/application-*.properties
 
 # Python
 __pycache__/
@@ -25,6 +26,7 @@ __pycache__/
 .env/
 .venv/
 backend/src/main/python/.ipynb_checkpoints/
+backend/src/main/python/qc_setup.py
 
 # VSCode
 .vscode/
