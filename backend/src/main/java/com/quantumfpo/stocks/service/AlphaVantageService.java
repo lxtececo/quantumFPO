@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 
 import java.time.LocalDate;
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 public class AlphaVantageService {
@@ -37,18 +38,14 @@ public class AlphaVantageService {
             List<StockData> mockData = new ArrayList<>();
             LocalDate today = LocalDate.now();
             for (int i = 0; i < days; i++) {
-                double open = 100 + Math.random() * 10;
-                double high = open + Math.random() * 5;
-                double low = open - Math.random() * 5;
-                double close = open + (Math.random() - 0.5) * 10;
-                mockData.add(new StockData(symbol, today.minusDays(i), open, high, low, close));
+                double close = 100 + (ThreadLocalRandom.current().nextDouble() - 0.5) * 20;
+                mockData.add(new StockData(symbol, today.minusDays(i), close));
             }
             mockData.sort(Comparator.comparing(StockData::getDate));
             return mockData;
         }
-        String url = String.format(
-            "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=%s&apikey=%s",
-            symbol, apiKey
+        String url = "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=%s&apikey=%s".formatted(
+                symbol, apiKey
         );
         logger.info("Requesting Alpha Vantage API: {}", url);
         ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
@@ -62,12 +59,9 @@ public class AlphaVantageService {
         while (dates.hasNext() && count < days) {
             String dateStr = dates.next();
             JsonNode dayData = timeSeries.path(dateStr);
-            if (dayData.has("1. open") && dayData.has("2. high") && dayData.has("3. low") && dayData.has("4. close")) {
-                double open = dayData.path("1. open").asDouble();
-                double high = dayData.path("2. high").asDouble();
-                double low = dayData.path("3. low").asDouble();
+            if (dayData.has("4. close")) {
                 double close = dayData.path("4. close").asDouble();
-                result.add(new StockData(symbol, LocalDate.parse(dateStr), open, high, low, close));
+                result.add(new StockData(symbol, LocalDate.parse(dateStr), close));
                 count++;
             }
         }

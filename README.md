@@ -5,18 +5,49 @@
 This project is a full-stack application for quantum-inspired financial portfolio optimization. It features a fast JavaScript frontend (React + Vite), a Spring Boot backend for RESTful services, and a Python microservice for advanced portfolio optimization using PyPortfolioOpt.
 
 
-### Main Features
+
+### Main Features & Enhancements
 - **User Login**: Secure login form for user authentication.
-- **Stock Data Loader**: Form to input up to three stock symbols and a Value at Risk (VaR) percentage.
+- **Dynamic Stock Amount**: Input field for stock amount lets users request any number of stocks. The frontend generates a random list of stock symbols and passes it to the backend for simulation or real data retrieval.
+- **Flexible Period Selection**: Users can select the number of days of historical data to load for optimization.
 - **Historic Data Visualization**: Table and interactive chart displaying open, high, low, and close prices for each stock.
 - **Portfolio Optimization**: Backend service integrates with Python to compute optimal portfolio weights using mean-variance optimization (max Sharpe ratio).
+- **Quantum Optimization (QAOA)**: Python backend supports quantum-inspired optimization using Qiskit QAOA, AerSimulator, and IBM Quantum backends. Includes job tracking and detailed logging for quantum jobs.
+- **Robust Logging & Error Handling**: All backend and Python optimizer scripts include step-by-step logging, error handling, and job tracking for debugging and transparency.
 - **Mock Data Support**: Simulate stock data for development/testing using special stock symbols (e.g., SIM_APPL).
+- **Full-Stack Test Coverage**: Unit and integration tests for frontend (Jest/Testing Library), backend (JUnit/Spring Boot Test), and Python microservices (pytest).
 
 ---
 
 ## Future Enhancements
+- Explore Quantum diagonalization algorithms. [Learn more](https://qiskit.qotlabs.org/learning/courses/quantum-diagonalization-algorithms)
 - Explore The variational quantum eigensolver (VQE) for financial optimization. [Learn more](https://qiskit.qotlabs.org/learning/courses/quantum-diagonalization-algorithms/vqe)
 - Explore Perform dynamic portfolio optimization with Global Data Quantum's Portfolio Optimizer. [Learn more](https://quantum.cloud.ibm.com/docs/en/tutorials/global-data-quantum-optimizer#perform-dynamic-portfolio-optimization-with-global-data-quantums-portfolio-optimizer)
+
+---
+
+
+## Running Tests
+
+### Frontend (React)
+```sh
+npx jest
+# or
+npm test
+```
+
+### Python Backend
+```sh
+pytest backend/src/main/python/
+# or
+pytest tests/
+```
+
+### Java Backend
+```sh
+cd backend
+mvn test
+```
 
 ---
 

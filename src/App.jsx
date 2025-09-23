@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -14,6 +14,8 @@ import {
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
 function App() {
+  const [hybridOptResult, setHybridOptResult] = useState(null);
+
   // Sample user for login validation
   const SAMPLE_USER = { username: 'demo', password: 'quantum123' };
 
@@ -23,33 +25,49 @@ function App() {
   const [loggedIn, setLoggedIn] = useState(false);
   const [authToken, setAuthToken] = useState('');
 
-  // Transaction form state for three stocks
+  // Transaction form state for amount only
   const [transaction, setTransaction] = useState({
-    stock1: 'SIM_APPL',
-    stock2: 'SIM_MSFT',
-    stock3: 'SIM_GOOGL',
-    varPercent: 5 // default Value at Risk in %
+    stockAmount: 10, // default number of stocks to load
+    varPercent: 5, // default Value at Risk in %
+    period: 30, // default number of days to load
+    simulated: true, // default: simulated data
+    qcSimulator: true // default: use Aer quantum simulator
   });
   const [optResult, setOptResult] = useState(null);
   const [transactionError, setTransactionError] = useState('');
   const [transactionSuccess, setTransactionSuccess] = useState('');
   const [stockData, setStockData] = useState([]); // [{symbol, date, close}]
   const [expandedStocks, setExpandedStocks] = useState({});
+  const [lastSymbols, setLastSymbols] = useState([]);
+
+  // Helper to generate random stock symbols
+  const generateRandomStocks = (amount) => {
+    const base = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META', 'TSLA', 'NVDA', 'NFLX', 'INTC', 'IBM', 'ORCL', 'ADBE', 'CSCO', 'CRM', 'QCOM', 'TXN', 'AMD', 'AVGO', 'PYPL', 'SHOP'];
+    let stocks = [];
+    for (let i = 0; i < amount; i++) {
+      // Use SIM_ prefix for simulator mode
+      const symbol = base[i % base.length] + (i >= base.length ? '_' + (i+1) : '');
+      stocks.push('SIM_' + symbol);
+    }
+    return stocks;
+  };
 
   // Simulate backend login and token issuance
   const fakeLoginApi = async (username, password) => {
-    // Simulate network delay
     await new Promise((r) => setTimeout(r, 500));
     if (username === SAMPLE_USER.username && password === SAMPLE_USER.password) {
-      // Return a fake JWT token
       return { success: true, token: 'sample-jwt-token-12345' };
     }
     return { success: false, message: 'Invalid credentials' };
   };
 
-  // Real backend API call for three stocks, returns historic data
+  // Real backend API call for stocks, returns historic data
   const realTransactionApi = async (data, token) => {
     try {
+      const amount = Number(data.stockAmount) || 10;
+      const period = Number(data.period) || 30;
+      const stocks = generateRandomStocks(amount);
+      setLastSymbols(stocks);
       const response = await fetch('http://localhost:8080/api/stocks/load', {
         method: 'POST',
         headers: {
@@ -57,15 +75,16 @@ function App() {
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          stocks: [data.stock1, data.stock2, data.stock3],
-          period: 30 // last 30 days
+          stocks,
+          period,
+          stockAmount: amount,
+          simulated: data.simulated
         })
       });
       if (!response.ok) {
         const error = await response.json();
         return { success: false, message: error.message || 'Backend error' };
       }
-      // Expect backend to return all stock data as [{symbol, date, close}]
       const result = await response.json();
       return { success: true, data: result };
     } catch (err) {
@@ -81,7 +100,6 @@ function App() {
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
     setLoginError('');
-    // Secure login: call backend and get token
     if (login.username && login.password) {
       const res = await fakeLoginApi(login.username, login.password);
       if (res.success) {
@@ -96,10 +114,13 @@ function App() {
   };
 
   const handleTransactionChange = (e) => {
-    setTransaction({ ...transaction, [e.target.name]: e.target.value });
+    const { name, type, value, checked } = e.target;
+    setTransaction({
+      ...transaction,
+      [name]: type === 'checkbox' ? checked : value
+    });
   };
 
-  // Call backend optimization API
   const handleOptimizePortfolio = async (e) => {
     e.preventDefault();
     setOptResult(null);
@@ -111,7 +132,7 @@ function App() {
           'Authorization': `Bearer ${authToken}`
         },
         body: JSON.stringify({
-          stocks: [transaction.stock1, transaction.stock2, transaction.stock3],
+          stocks: lastSymbols,
           varPercent: Number(transaction.varPercent)
         })
       });
@@ -127,13 +148,40 @@ function App() {
     }
   };
 
+  const handleHybridOptimizePortfolio = async (e) => {
+    e.preventDefault();
+    setHybridOptResult(null);
+    try {
+      const response = await fetch('http://localhost:8080/api/stocks/hybrid-optimize', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        },
+        body: JSON.stringify({
+          stocks: lastSymbols,
+          varPercent: Number(transaction.varPercent),
+          qcSimulator: transaction.qcSimulator
+        })
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        setHybridOptResult({ error: error.message || 'Backend error' });
+        return;
+      }
+      const result = await response.json();
+      setHybridOptResult(result);
+    } catch (err) {
+      setHybridOptResult({ error: err.message });
+    }
+  };
+
   const handleTransactionSubmit = async (e) => {
     e.preventDefault();
     setTransactionError('');
     setTransactionSuccess('');
     setStockData([]);
-    if (transaction.stock1 && transaction.stock2 && transaction.stock3) {
-      // Real backend: send token in request
+    if (transaction.stockAmount > 0) {
       const res = await realTransactionApi(transaction, authToken);
       if (res.success) {
         setTransactionSuccess('Stocks loaded and stored for optimization!');
@@ -142,8 +190,40 @@ function App() {
         setTransactionError(res.message || 'Upload failed.');
       }
     } else {
-      setTransactionError('Please enter all three stock names.');
+      setTransactionError('Please enter a valid stock amount.');
     }
+  };
+
+  // --- Chart/grouping logic and collapsed state ---
+  const sortedData = [...stockData].sort((a, b) => new Date(a.date) - new Date(b.date));
+  const grouped = sortedData.reduce((acc, row) => {
+    acc[row.symbol] = acc[row.symbol] || [];
+    acc[row.symbol].push(row);
+    return acc;
+  }, {});
+  const allDates = Array.from(new Set(sortedData.map(d => d.date))).sort();
+  const datasets = Object.keys(grouped).map((symbol, idx) => ({
+    label: symbol,
+    data: allDates.map(date => {
+      const found = grouped[symbol].find(d => d.date === date);
+      return found ? found.close : null;
+    }),
+    borderColor: `hsl(${(idx * 40) % 360},70%,60%)`,
+    backgroundColor: `hsla(${(idx * 40) % 360},70%,60%,0.2)`,
+    tension: 0.2
+  }));
+
+  useEffect(() => {
+    if (stockData.length > 0) {
+      const initial = {};
+      Object.keys(grouped).forEach(symbol => { initial[symbol] = false; });
+      setExpandedStocks(initial);
+    }
+    // eslint-disable-next-line
+  }, [stockData.length]);
+
+  const handleToggle = (symbol) => {
+    setExpandedStocks((prev) => ({ ...prev, [symbol]: !prev[symbol] }));
   };
 
   return (
@@ -175,32 +255,38 @@ function App() {
       ) : (
         <form className="form" onSubmit={handleTransactionSubmit}>
           <h2>Load Stocks for Portfolio</h2>
-          <input
-            type="text"
-            name="stock1"
-            placeholder="Stock Name 1 (e.g. AAPL)"
-            value={transaction.stock1}
-            onChange={handleTransactionChange}
-            required
-          />
-          <input
-            type="text"
-            name="stock2"
-            placeholder="Stock Name 2 (e.g. MSFT)"
-            value={transaction.stock2}
-            onChange={handleTransactionChange}
-            required
-          />
-          <input
-            type="text"
-            name="stock3"
-            placeholder="Stock Name 3 (e.g. GOOGL)"
-            value={transaction.stock3}
-            onChange={handleTransactionChange}
-            required
-          />
+          <label htmlFor="stockAmount" style={{display:'block',marginBottom:'4px'}}>Number of stocks to load</label>
           <input
             type="number"
+            id="stockAmount"
+            name="stockAmount"
+            min="1"
+            max="100"
+            step="1"
+            placeholder="Number of stocks to load"
+            value={transaction.stockAmount}
+            onChange={handleTransactionChange}
+            required
+            style={{marginBottom:'8px'}}
+          />
+          <label htmlFor="period" style={{display:'block',marginBottom:'4px'}}>Number of days to load</label>
+          <input
+            type="number"
+            id="period"
+            name="period"
+            min="1"
+            max="365"
+            step="1"
+            placeholder="Number of days to load"
+            value={transaction.period}
+            onChange={handleTransactionChange}
+            required
+            style={{marginBottom:'8px'}}
+          />
+          <label htmlFor="varPercent" style={{display:'block',marginBottom:'4px'}}>Value at Risk (%)</label>
+          <input
+            type="number"
+            id="varPercent"
             name="varPercent"
             min="1"
             max="100"
@@ -211,8 +297,27 @@ function App() {
             required
             style={{marginBottom:'8px'}}
           />
+          <label htmlFor="simulated" style={{display:'block',marginBottom:'4px'}}>Simulated</label>
+          <input
+            type="checkbox"
+            id="simulated"
+            name="simulated"
+            checked={transaction.simulated}
+            onChange={handleTransactionChange}
+            style={{marginBottom:'8px'}}
+          />
+          <label htmlFor="qcSimulator" style={{display:'block',marginBottom:'4px'}}>QC Simulator (Aer)</label>
+          <input
+            type="checkbox"
+            id="qcSimulator"
+            name="qcSimulator"
+            checked={transaction.qcSimulator}
+            onChange={handleTransactionChange}
+            style={{marginBottom:'8px'}}
+          />
           <button type="submit">Load Stocks</button>
-          <button type="button" style={{marginLeft:'10px'}} onClick={handleOptimizePortfolio}>Optimize Portfolio</button>
+          <button type="button" style={{marginLeft:'10px'}} onClick={handleOptimizePortfolio}>Optimize Portfolio Classic</button>
+          <button type="button" style={{marginLeft:'10px', background:'#6c47ff', color:'#fff', borderRadius:'4px', border:'none', padding:'8px 16px'}} onClick={handleHybridOptimizePortfolio}>Optimize Portfolio Hybrid</button>
           {transactionError && <p className="error">{transactionError}</p>}
           {transactionSuccess && <p className="success">{transactionSuccess}</p>}
           {optResult && (
@@ -227,111 +332,75 @@ function App() {
               )}
             </div>
           )}
+          {hybridOptResult && (
+            <div style={{marginTop:'10px'}}>
+              {hybridOptResult.error ? (
+                <p className="error">{hybridOptResult.error}</p>
+              ) : (
+                <div>
+                  <h3>Hybrid Optimization Result</h3>
+                  <pre>{JSON.stringify(hybridOptResult, null, 2)}</pre>
+                </div>
+              )}
+            </div>
+          )}
         </form>
       )}
-      {loggedIn && stockData.length > 0 && (() => {
-        const sortedData = [...stockData].sort((a, b) => new Date(a.date) - new Date(b.date));
-        // Group data by symbol
-        const grouped = sortedData.reduce((acc, row) => {
-          acc[row.symbol] = acc[row.symbol] || [];
-          acc[row.symbol].push(row);
-          return acc;
-        }, {});
-        const handleToggle = (symbol) => {
-          setExpandedStocks((prev) => ({ ...prev, [symbol]: !prev[symbol] }));
-        };
-        return (
-          <div style={{marginTop: '2rem'}}>
-            <h2>Historic Stock Data</h2>
-            {Object.keys(grouped).map((symbol) => {
-              const data = grouped[symbol];
-              const expanded = expandedStocks[symbol];
-              return (
-                <div key={symbol} style={{marginBottom: '2rem', border: '1px solid #eee', borderRadius: '8px', padding: '1rem'}}>
-                  <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
-                    <h3 style={{margin: 0}}>{symbol}</h3>
-                    <button className="expand-btn" onClick={() => handleToggle(symbol)}>
-                      {expanded ? '▼ Hide History' : '▶ Show History'}
-                    </button>
-                  </div>
-                  {expanded && (
-                    <table style={{width: '100%', borderCollapse: 'collapse', marginTop: '1rem'}}>
-                      <thead>
-                        <tr>
-                          <th style={{borderBottom: '1px solid #ccc'}}>Date</th>
-                          <th style={{borderBottom: '1px solid #ccc'}}>Open</th>
-                          <th style={{borderBottom: '1px solid #ccc'}}>High</th>
-                          <th style={{borderBottom: '1px solid #ccc'}}>Low</th>
-                          <th style={{borderBottom: '1px solid #ccc'}}>Close</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {data.map((row) => (
-                          <tr key={`${row.symbol}-${row.date}`}>
-                            <td>{row.date}</td>
-                            <td>{row.open}</td>
-                            <td>{row.high}</td>
-                            <td>{row.low}</td>
-                            <td>{row.close}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )}
-                  <div style={{marginTop: '2rem'}}>
-                    <Line
-                      data={{
-                        labels: data.map(d => d.date),
-                        datasets: [
-                          {
-                            label: `${symbol} Open`,
-                            data: data.map(d => d.open),
-                            borderColor: '#ffa600',
-                            backgroundColor: 'rgba(255,166,0,0.1)',
-                            tension: 0.2
-                          },
-                          {
-                            label: `${symbol} High`,
-                            data: data.map(d => d.high),
-                            borderColor: '#00c49a',
-                            backgroundColor: 'rgba(0,196,154,0.1)',
-                            tension: 0.2
-                          },
-                          {
-                            label: `${symbol} Low`,
-                            data: data.map(d => d.low),
-                            borderColor: '#ff6361',
-                            backgroundColor: 'rgba(255,99,97,0.1)',
-                            tension: 0.2
-                          },
-                          {
-                            label: `${symbol} Close`,
-                            data: data.map(d => d.close),
-                            borderColor: '#4da6ff',
-                            backgroundColor: 'rgba(77,166,255,0.2)',
-                            tension: 0.2
-                          }
-                        ]
-                      }}
-                      options={{
-                        responsive: true,
-                        plugins: {
-                          legend: { position: 'top' },
-                          title: { display: true, text: `${symbol} - Last 30 Days` }
-                        },
-                        scales: {
-                          x: { title: { display: true, text: 'Date' } },
-                          y: { title: { display: true, text: 'Price' } }
-                        }
-                      }}
-                    />
-                  </div>
+      {loggedIn && stockData.length > 0 && (
+        <div style={{marginTop: '2rem'}}>
+          <h2>All Stock Data (Combined Chart)</h2>
+          <Line
+            data={{
+              labels: allDates,
+              datasets
+            }}
+            options={{
+              responsive: true,
+              plugins: {
+                legend: { position: 'top' },
+                title: { display: true, text: 'All Stocks - Last 30 Days' }
+              },
+              scales: {
+                x: { title: { display: true, text: 'Date' } },
+                y: { title: { display: true, text: 'Price' } }
+              }
+            }}
+          />
+          <h2 style={{marginTop:'2rem'}}>Historic Stock Data</h2>
+          {Object.keys(grouped).map((symbol) => {
+            const data = grouped[symbol];
+            const expanded = expandedStocks[symbol] ?? false;
+            return (
+              <div key={symbol} style={{marginBottom: '2rem', border: '1px solid #eee', borderRadius: '8px', padding: '1rem'}}>
+                <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
+                  <h3 style={{margin: 0}}>{symbol}</h3>
+                  <button className="expand-btn" onClick={() => handleToggle(symbol)}>
+                    {expanded ? '▼ Hide History' : '▶ Show History'}
+                  </button>
                 </div>
-              );
-            })}
-          </div>
-        );
-      })()}
+                {expanded && (
+                  <table style={{width: '100%', borderCollapse: 'collapse', marginTop: '1rem'}}>
+                    <thead>
+                      <tr>
+                        <th style={{borderBottom: '1px solid #ccc'}}>Date</th>
+                        <th style={{borderBottom: '1px solid #ccc'}}>Close</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.map((row) => (
+                        <tr key={`${row.symbol}-${row.date}`}>
+                          <td>{row.date}</td>
+                          <td>{row.close}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
