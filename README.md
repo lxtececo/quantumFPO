@@ -4,7 +4,60 @@
 ## Project Overview
 This project is a full-stack application for quantum-inspired financial portfolio optimization. It features a fast JavaScript frontend (React + Vite), a Spring Boot backend for RESTful services, and a Python microservice for advanced portfolio optimization using PyPortfolioOpt.
 
+---
 
+## Project Structure
+
+This project follows a clean, organized structure with clear separation between frontend and backend components:
+
+```
+quantumFPO/
+├── 📁 backend/                    # Java Spring Boot Backend
+│   ├── 📁 src/main/java/         # Java source code
+│   │   └── 📁 com/quantumfpo/    # Main application packages
+│   │       ├── 📁 stocks/        # Stock-related services & controllers
+│   │       │   ├── 📁 controller/ # REST API controllers
+│   │       │   ├── 📁 model/      # Data models & DTOs
+│   │       │   └── 📁 service/    # Business logic services
+│   │       └── StocksApplication.java # Spring Boot main class
+│   ├── 📁 src/main/python/       # Python optimization scripts
+│   │   ├── classic_portfolio_opt.py   # Classical optimization
+│   │   ├── hybrid_portfolio_opt.py    # Quantum-classical hybrid
+│   │   └── qc_setup.py               # Quantum computing setup
+│   ├── 📁 src/test/              # Backend tests
+│   │   ├── 📁 java/              # Java unit & integration tests
+│   │   └── 📁 python/            # Python algorithm tests
+│   └── pom.xml                   # Maven configuration
+├── 📁 frontend/                   # React Frontend Application
+│   ├── 📁 src/                   # React source code
+│   │   ├── App.jsx               # Main React component
+│   │   ├── main.jsx              # Application entry point
+│   │   └── 📁 assets/            # Static assets
+│   ├── 📁 public/                # Public static files
+│   ├── 📁 test/                  # Frontend tests (Jest)
+│   ├── 📁 coverage/              # Test coverage reports
+│   ├── package.json              # Frontend dependencies & scripts
+│   ├── vite.config.js            # Vite build configuration
+│   ├── jest.config.js            # Test configuration
+│   ├── eslint.config.js          # Code linting rules
+│   ├── babel.config.js           # Babel transpilation
+│   └── index.html                # Main HTML template
+├── 📁 .venv/                     # Python virtual environment
+├── 📁 .vscode/                   # VS Code workspace settings
+├── 📁 .git/                      # Git version control
+├── README.md                     # Project documentation
+└── TEST_COVERAGE_ENHANCEMENT_REPORT.md # Test coverage details
+```
+
+### Architecture Components
+
+- **🚀 Frontend (React + Vite)**: Modern, fast frontend with hot reload, component testing, and responsive design
+- **☕ Backend (Spring Boot)**: RESTful API server with dependency injection, auto-configuration, and comprehensive testing
+- **🐍 Python Microservices**: Quantum and classical portfolio optimization algorithms with scientific computing libraries
+- **🧪 Testing Suite**: Complete test coverage across all layers with unit, integration, and end-to-end testing
+- **⚡ Development Tools**: Modern toolchain with Vite, Jest, ESLint, Maven, and Python virtual environments
+
+---
 
 ### Main Features & Enhancements
 - **User Login**: Secure login form for user authentication.
@@ -31,6 +84,7 @@ This project is a full-stack application for quantum-inspired financial portfoli
 
 ### Frontend (React)
 ```sh
+cd frontend
 npx jest
 # or
 npm test
@@ -38,9 +92,10 @@ npm test
 
 ### Python Backend
 ```sh
-pytest backend/src/main/python/
-# or
-pytest tests/
+cd backend
+python -m pytest src/test/python/ -v
+# or for specific test files
+python -m pytest src/test/python/test_hybrid_simplified.py -v
 ```
 
 ### Java Backend
@@ -82,7 +137,7 @@ cd quantumFPO
 
 ### 2. Install Frontend Dependencies
 ```sh
-cd quantumFPO
+cd frontend
 npm install
 ```
 
@@ -94,16 +149,27 @@ Frontend will run at [http://localhost:5173](http://localhost:5173).
 
 ### 4. Setup Python Environment
 ```sh
-cd backend/src/main/python
+# Create virtual environment in project root
 python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-pip install -r requirements.txt  # Or manually: pip install pypfopt pandas numpy scikit-learn
+# On Windows:
+.venv\Scripts\activate
+# On macOS/Linux:
+source .venv/bin/activate
+
+# Install Python dependencies
+cd backend/src/main/python
+pip install -r requirements.txt
+# Or manually: pip install pypfopt pandas numpy scikit-learn qiskit pytest
 ```
 
 ### 5. Start the Spring Boot Backend
 ```sh
-cd ../../../..
-./mvnw spring-boot:run  # Or use your IDE to run StocksApplication
+cd backend
+# On Windows:
+.\mvnw.cmd spring-boot:run
+# On macOS/Linux:
+./mvnw spring-boot:run
+# Or use your IDE to run StocksApplication.java
 ```
 Backend will run at [http://localhost:8080](http://localhost:8080).
 
@@ -132,6 +198,28 @@ This project uses [PyPortfolioOpt](https://pyportfolioopt.readthedocs.io/en/late
 - Integration with pandas for easy data handling
 
 For more details, see the [PyPortfolioOpt User Guide](https://pyportfolioopt.readthedocs.io/en/latest/UserGuide.html#user-guide).
+
+---
+
+## Development Benefits
+
+### Clean Architecture
+- **🎯 Clear Separation**: Frontend and backend are completely separated for focused development
+- **📦 Modular Design**: Each component can be developed, tested, and deployed independently  
+- **🔧 Easy Maintenance**: Well-organized structure makes debugging and updates straightforward
+- **👥 Team Collaboration**: Multiple developers can work on different parts without conflicts
+
+### Professional Structure
+- **📁 Industry Standard**: Follows established patterns used by major tech companies
+- **🚀 Scalable**: Ready for microservices architecture and containerization
+- **🔄 CI/CD Ready**: Structure supports automated testing and deployment pipelines
+- **📚 Self-Documenting**: Clear folder hierarchy makes codebase exploration intuitive
+
+### Development Experience
+- **⚡ Fast Iteration**: Hot reload for frontend, auto-restart for backend changes
+- **🧪 Comprehensive Testing**: Isolated test suites for each component
+- **🛠️ Modern Tooling**: Latest versions of React, Spring Boot, and Python frameworks
+- **📊 Monitoring**: Built-in logging, error tracking, and test coverage reporting
 
 ---
 
