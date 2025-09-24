@@ -144,7 +144,7 @@ The project includes comprehensive GitHub Actions workflows for automated testin
 3. **🐍 Python Testing** (`python-tests.yml`): PyPortfolioOpt and quantum algorithm tests
 
 ### Python CI Features
-- **Multi-version Testing**: Python 3.9, 3.10, 3.11
+- **Python 3.13 Testing**: Latest Python version compatibility
 - **Dependency Caching**: Fast builds with pip cache
 - **Coverage Reports**: pytest with coverage reporting
 - **Integration Tests**: Standalone script execution validation

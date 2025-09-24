@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.9', '3.10', '3.11']
+        python-version: ['3.13']
 
     steps:
     - uses: actions/checkout@v4
@@ -71,7 +71,7 @@ jobs:
         PYTHONPATH: ${{ github.workspace }}/backend/src/main/python
 
     - name: Upload coverage reports to Codecov
-      if: matrix.python-version == '3.11'
+      if: matrix.python-version == '3.13'
       uses: codecov/codecov-action@v3
       with:
         file: ./backend/coverage.xml
@@ -97,10 +97,10 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Set up Python 3.11
+    - name: Set up Python 3.13
       uses: actions/setup-python@v4
       with:
-        python-version: '3.11'
+        python-version: '3.13'
 
     - name: Install dependencies
       run: |
