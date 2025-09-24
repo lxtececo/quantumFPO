@@ -8,6 +8,7 @@ dist/
 # Java/Spring Boot
 backend/target/
 target/
+coverage/
 *.class
 *.jar
 *.war
