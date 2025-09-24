@@ -24,10 +24,9 @@ quantumFPO/
 │   │   ├── classic_portfolio_opt.py   # Classical optimization
 │   │   ├── hybrid_portfolio_opt.py    # Quantum-classical hybrid
 │   │   └── qc_setup.py               # Quantum computing setup
-│   ├── 📁 src/test/              # Backend tests
-│   │   ├── 📁 java/              # Java unit & integration tests
-│   │   └── 📁 python/            # Python algorithm tests
-│   └── pom.xml                   # Maven configuration
+│   └── 📁 src/test/              # Backend tests
+│       ├── 📁 java/              # Java unit & integration tests
+│       └── 📁 python/            # Python algorithm tests
 ├── 📁 frontend/                   # React Frontend Application
 │   ├── 📁 src/                   # React source code
 │   │   ├── App.jsx               # Main React component
@@ -45,6 +44,7 @@ quantumFPO/
 ├── 📁 .venv/                     # Python virtual environment
 ├── 📁 .vscode/                   # VS Code workspace settings
 ├── 📁 .git/                      # Git version control
+├── pom.xml                       # Maven configuration (root level)
 ├── README.md                     # Project documentation
 └── TEST_COVERAGE_ENHANCEMENT_REPORT.md # Test coverage details
 ```
@@ -100,7 +100,7 @@ python -m pytest src/test/python/test_hybrid_simplified.py -v
 
 ### Java Backend
 ```sh
-cd backend
+# Run from root directory (pom.xml is now at root level)
 mvn test
 ```
 
@@ -164,12 +164,9 @@ pip install -r requirements.txt
 
 ### 5. Start the Spring Boot Backend
 ```sh
-cd backend
-# On Windows:
-.\mvnw.cmd spring-boot:run
-# On macOS/Linux:
-./mvnw spring-boot:run
-# Or use your IDE to run StocksApplication.java
+# Run from root directory (pom.xml is now at root level)
+mvn spring-boot:run
+# Or use your IDE to run backend/src/main/java/.../StocksApplication.java
 ```
 Backend will run at [http://localhost:8080](http://localhost:8080).
 

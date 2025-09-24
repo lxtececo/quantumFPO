@@ -1,0 +1,6 @@
+com\quantumfpo\stocks\StocksApplication.class
+com\quantumfpo\stocks\model\StockData.class
+com\quantumfpo\stocks\model\StockRequest.class
+com\quantumfpo\stocks\model\OptimizeRequest.class
+com\quantumfpo\stocks\controller\StockController.class
+com\quantumfpo\stocks\service\AlphaVantageService.class
