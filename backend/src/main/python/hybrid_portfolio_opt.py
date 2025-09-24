@@ -117,9 +117,6 @@ def run_real_backend(ansatz, hamiltonian, num_assets, init_params):
     from qiskit_ibm_runtime import QiskitRuntimeService, EstimatorV2 as Estimator, SamplerV2 as Sampler
     import os
     print('[LOG] [RealBackend] Step 1: Initializing QiskitRuntimeService')
-    # Estimate number of jobs: minimization iterations + 1 sampler job
-    expected_estimator_jobs = 0
-    expected_sampler_jobs = 1
     # COBYLA maxiter default is 1000, but we use tol=1e-2, so actual may be less
     # We can estimate from init_params size, but let's log the minimizer options
     print(f'[LOG] [RealBackend] Minimizer options: method=COBYLA, tol=1e-2, init_params={len(init_params)}')
