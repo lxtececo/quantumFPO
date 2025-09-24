@@ -229,7 +229,6 @@ def quantum_optimize(prices, risk_aversion=0.5):
     ansatz = QAOAAnsatz(cost_operator=hamiltonian, reps=reps)
     ansatz.measure_all()
     print("[LOG] Quantum: Built QAOA ansatz circuit", file=sys.stderr)
-    global qc_simulator_mode
     rng = np.random.default_rng(42)
     init_params = rng.uniform(0, 2 * np.pi, ansatz.num_parameters)
     if qc_simulator_mode:
