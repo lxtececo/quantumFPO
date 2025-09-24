@@ -1,5 +1,0 @@
-com\quantumfpo\stocks\service\AlphaVantageServiceTest.class
-com\quantumfpo\stocks\model\StockRequestTest.class
-com\quantumfpo\stocks\controller\StockControllerTest.class
-com\quantumfpo\stocks\model\OptimizeRequestTest.class
-com\quantumfpo\stocks\model\StockDataTest.class

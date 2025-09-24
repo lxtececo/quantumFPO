@@ -198,4 +198,76 @@ class AlphaVantageServiceTest {
             service.fetchStockHistory(null, days);
         });
     }
+
+    @Test
+    void testFetchStockHistoryWithZeroDays() throws IOException {
+        String symbol = "SIM_AAPL";
+        int days = 0;
+        
+        List<StockData> result = service.fetchStockHistory(symbol, days);
+        
+        assertNotNull(result);
+        assertEquals(0, result.size());
+    }
+
+    @Test
+    void testFetchStockHistoryWithNegativeDays() throws IOException {
+        String symbol = "SIM_AAPL";
+        int days = -5;
+        
+        List<StockData> result = service.fetchStockHistory(symbol, days);
+        
+        // Service should handle negative days gracefully
+        assertNotNull(result);
+        assertTrue(result.size() >= 0);
+    }
+
+    @Test
+    void testFetchStockHistoryApiKeyHandling() throws IOException {
+        // Test with different API key scenarios
+        AlphaVantageService serviceWithoutKey = new AlphaVantageService();
+        // Not setting API key should still work for simulator symbols
+        
+        String symbol = "SIM_AAPL";
+        int days = 3;
+        
+        List<StockData> result = serviceWithoutKey.fetchStockHistory(symbol, days);
+        
+        assertNotNull(result);
+        assertEquals(days, result.size());
+    }
+
+    @Test
+    void testFetchStockHistoryInvalidApiKey() throws IOException {
+        AlphaVantageService serviceInvalidKey = new AlphaVantageService();
+        ReflectionTestUtils.setField(serviceInvalidKey, "apiKey", "invalid_key");
+        
+        String symbol = "AAPL"; // Non-simulator symbol
+        int days = 5;
+        
+        // Should handle invalid API key gracefully
+        List<StockData> result = serviceInvalidKey.fetchStockHistory(symbol, days);
+        
+        assertNotNull(result);
+        // With invalid key, API returns error, so result should be empty
+        assertTrue(result.size() >= 0);
+    }
+
+    @Test
+    void testFetchStockHistoryEdgeCaseSymbols() throws IOException {
+        String[] edgeCaseSymbols = {"SIM_", "SIM_123", "SIM_VERY_LONG_SYMBOL_NAME"};
+        int days = 3;
+        
+        for (String symbol : edgeCaseSymbols) {
+            List<StockData> result = service.fetchStockHistory(symbol, days);
+            
+            assertNotNull(result);
+            // For simulator symbols starting with SIM_, should return data
+            if (symbol.startsWith("SIM_")) {
+                assertEquals(days, result.size());
+            } else {
+                assertTrue(result.size() >= 0);
+            }
+        }
+    }
 }

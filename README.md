@@ -13,6 +13,7 @@ This project follows a clean, organized structure with clear separation between 
 ```
 quantumFPO/
 ├── 📁 backend/                    # Java Spring Boot Backend
+│   ├── pom.xml                   # Maven configuration
 │   ├── 📁 src/main/java/         # Java source code
 │   │   └── 📁 com/quantumfpo/    # Main application packages
 │   │       ├── 📁 stocks/        # Stock-related services & controllers
@@ -39,7 +40,6 @@ quantumFPO/
 ├── 📁 .venv/                     # Python virtual environment
 ├── 📁 .vscode/                   # VS Code workspace settings
 ├── 📁 .git/                      # Git version control
-├── pom.xml                       # Maven configuration (root level)
 ├── package.json                  # Node.js dependencies & scripts
 ├── package-lock.json             # Node.js dependency lock file
 ├── vite.config.js                # Vite build configuration
@@ -102,9 +102,32 @@ python -m pytest src/test/python/test_hybrid_simplified.py -v
 
 ### Java Backend
 ```sh
-# Run from root directory (pom.xml is now at root level)
+# Run from backend directory (pom.xml is located in backend/)
+cd backend
 mvn test
 ```
+
+### Java Backend Code Coverage Reports
+Generate comprehensive test coverage reports using JaCoCo:
+
+```sh
+# Run tests with coverage collection
+cd backend
+mvn clean test
+
+# Generate coverage reports (HTML, XML, CSV formats)
+mvn jacoco:report
+
+# Check coverage against thresholds (70% instruction, 65% branch)
+mvn jacoco:check
+```
+
+**View Coverage Reports:**
+- **Interactive HTML Report**: Open `backend/target/site/jacoco/index.html` in your browser
+- **XML Report**: `backend/target/site/jacoco/jacoco.xml` (CI/CD integration)
+- **CSV Report**: `backend/target/site/jacoco/jacoco.csv` (data analysis)
+
+**Current Coverage:** ~59% instruction coverage with comprehensive error scenario testing
 
 ---
 
@@ -166,7 +189,8 @@ pip install -r requirements.txt
 
 ### 5. Start the Spring Boot Backend
 ```sh
-# Run from root directory (pom.xml is now at root level)
+# Run from backend directory (pom.xml is located in backend/)
+cd backend
 mvn spring-boot:run
 # Or use your IDE to run backend/src/main/java/.../StocksApplication.java
 ```

@@ -4,8 +4,14 @@ import numpy as np
 import pandas as pd
 import tempfile
 import os
+import sys
+import subprocess
 from unittest.mock import patch
-from backend.src.main.python.classic_portfolio_opt import optimize_portfolio
+
+# Add the backend source directory to Python path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'main', 'python'))
+
+from classic_portfolio_opt import optimize_portfolio
 
 class TestClassicPortfolioOptimization:
     """Comprehensive test suite for classic portfolio optimization."""
@@ -280,6 +286,99 @@ class TestClassicPortfolioMainScript:
         except Exception as e:
             # Expected behavior
             assert isinstance(e, (ValueError, IndexError, KeyError, RuntimeError))
+    
+    def test_main_script_subprocess_execution(self):
+        """Test main script execution via subprocess."""
+        import subprocess
+        input_data = {
+            "stock_data": [
+                {"symbol": "AAPL", "date": "2025-09-01", "close": 150.0},
+                {"symbol": "AAPL", "date": "2025-09-02", "close": 152.0},
+                {"symbol": "AAPL", "date": "2025-09-03", "close": 151.0}
+            ],
+            "var_percent": 5
+        }
+        
+        with tempfile.TemporaryDirectory() as temp_dir:
+            input_file = os.path.join(temp_dir, "input.json")
+            output_file = os.path.join(temp_dir, "output.json")
+            script_path = os.path.join(os.path.dirname(__file__), '..', '..', 'main', 'python', 'classic_portfolio_opt.py')
+            
+            # Write input file
+            with open(input_file, 'w') as f:
+                json.dump(input_data, f)
+            
+            # Execute script via subprocess
+            proc_result = subprocess.run([
+                sys.executable, script_path, input_file, output_file
+            ], capture_output=True, text=True)
+            
+            # Check that script executed successfully
+            assert proc_result.returncode == 0, f"Script failed with stderr: {proc_result.stderr}"
+            
+            # Check output file exists and has valid content
+            assert os.path.exists(output_file)
+            with open(output_file, 'r') as f:
+                result_data = json.load(f)
+            
+            assert "weights" in result_data
+            assert "expected_annual_return" in result_data
+            assert "annual_volatility" in result_data
+            assert "sharpe_ratio" in result_data
+    
+    def test_main_script_subprocess_invalid_arguments(self):
+        """Test main script with invalid arguments via subprocess."""
+        import subprocess
+        script_path = os.path.join(os.path.dirname(__file__), '..', '..', 'main', 'python', 'classic_portfolio_opt.py')
+        
+        # Execute script with missing arguments
+        proc_result = subprocess.run([
+            sys.executable, script_path
+        ], capture_output=True, text=True)
+        
+        # Should exit with error code 1
+        assert proc_result.returncode == 1
+        
+        # Should contain error message in stdout
+        assert "error" in proc_result.stdout
+        assert "Usage" in proc_result.stdout
+    
+    def test_main_script_subprocess_missing_input_file(self):
+        """Test main script with non-existent input file via subprocess."""
+        import subprocess
+        with tempfile.TemporaryDirectory() as temp_dir:
+            non_existent_input = os.path.join(temp_dir, "nonexistent.json")
+            output_file = os.path.join(temp_dir, "output.json")
+            script_path = os.path.join(os.path.dirname(__file__), '..', '..', 'main', 'python', 'classic_portfolio_opt.py')
+            
+            # Execute script with non-existent input file
+            subprocess.run([
+                sys.executable, script_path, non_existent_input, output_file
+            ], capture_output=True, text=True)
+            
+            # Should handle the file not found error gracefully
+            # Output should be written to output_file with error message
+            assert os.path.exists(output_file)
+            with open(output_file, 'r') as f:
+                result_data = json.load(f)
+            assert "error" in result_data
+
+    def test_main_script_subprocess_exception_without_output_path(self):
+        """Test main script behavior when exception occurs before output_path is defined"""
+        import subprocess
+        # Create a scenario where output_path causes exception during writing
+        # Use insufficient arguments to trigger the error before output_path is properly set
+        script_path = os.path.join(os.path.dirname(__file__), '..', '..', 'main', 'python', 'classic_portfolio_opt.py')
+        
+        # Execute script with insufficient arguments - should fail before output path handling
+        result = subprocess.run([
+            sys.executable, script_path
+        ], capture_output=True, text=True)
+        
+        # Should exit with non-zero code and print error to stdout
+        assert result.returncode != 0
+        # Should print JSON error message to stdout
+        assert 'error' in result.stdout
 
 # For backward compatibility with existing test
 def test_optimize_portfolio_basic():
