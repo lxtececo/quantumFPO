@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import './App.css';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -230,7 +231,7 @@ function App() {
     <div className="container">
       <h1>Quantum Portfolio Optimization</h1>
       {!loggedIn ? (
-        <form className="form" onSubmit={handleLoginSubmit}>
+        <form className="form login-form" onSubmit={handleLoginSubmit}>
           <h2>Login</h2>
           <input
             type="text"
@@ -253,144 +254,182 @@ function App() {
           <p style={{fontSize:'0.95rem',color:'#888'}}>Sample user: <b>demo</b> / <b>quantum123</b></p>
         </form>
       ) : (
-        <form className="form" onSubmit={handleTransactionSubmit}>
-          <h2>Load Stocks for Portfolio</h2>
-          <label htmlFor="stockAmount" style={{display:'block',marginBottom:'4px'}}>Number of stocks to load</label>
-          <input
-            type="number"
-            id="stockAmount"
-            name="stockAmount"
-            min="1"
-            max="100"
-            step="1"
-            placeholder="Number of stocks to load"
-            value={transaction.stockAmount}
-            onChange={handleTransactionChange}
-            required
-            style={{marginBottom:'8px'}}
-          />
-          <label htmlFor="period" style={{display:'block',marginBottom:'4px'}}>Number of days to load</label>
-          <input
-            type="number"
-            id="period"
-            name="period"
-            min="1"
-            max="365"
-            step="1"
-            placeholder="Number of days to load"
-            value={transaction.period}
-            onChange={handleTransactionChange}
-            required
-            style={{marginBottom:'8px'}}
-          />
-          <label htmlFor="varPercent" style={{display:'block',marginBottom:'4px'}}>Value at Risk (%)</label>
-          <input
-            type="number"
-            id="varPercent"
-            name="varPercent"
-            min="1"
-            max="100"
-            step="0.1"
-            placeholder="Value at Risk (%)"
-            value={transaction.varPercent}
-            onChange={handleTransactionChange}
-            required
-            style={{marginBottom:'8px'}}
-          />
-          <label htmlFor="simulated" style={{display:'block',marginBottom:'4px'}}>Simulated</label>
-          <input
-            type="checkbox"
-            id="simulated"
-            name="simulated"
-            checked={transaction.simulated}
-            onChange={handleTransactionChange}
-            style={{marginBottom:'8px'}}
-          />
-          <label htmlFor="qcSimulator" style={{display:'block',marginBottom:'4px'}}>QC Simulator (Aer)</label>
-          <input
-            type="checkbox"
-            id="qcSimulator"
-            name="qcSimulator"
-            checked={transaction.qcSimulator}
-            onChange={handleTransactionChange}
-            style={{marginBottom:'8px'}}
-          />
-          <button type="submit">Load Stocks</button>
-          <button type="button" style={{marginLeft:'10px'}} onClick={handleOptimizePortfolio}>Optimize Portfolio Classic</button>
-          <button type="button" style={{marginLeft:'10px', background:'#6c47ff', color:'#fff', borderRadius:'4px', border:'none', padding:'8px 16px'}} onClick={handleHybridOptimizePortfolio}>Optimize Portfolio Hybrid</button>
-          {transactionError && <p className="error">{transactionError}</p>}
-          {transactionSuccess && <p className="success">{transactionSuccess}</p>}
-          {optResult && (
-            <div style={{marginTop:'10px'}}>
-              {optResult.error ? (
-                <p className="error">{optResult.error}</p>
-              ) : (
-                <div>
-                  <h3>Optimization Result</h3>
-                  <pre>{JSON.stringify(optResult, null, 2)}</pre>
-                </div>
-              )}
+        <form className="form portfolio-form" onSubmit={handleTransactionSubmit}>
+          <div className="form-inputs">
+            <h2>Load Stocks for Portfolio</h2>
+            <div>
+              <label htmlFor="stockAmount" style={{display:'block',marginBottom:'4px'}}>Number of stocks to load</label>
+              <input
+                type="number"
+                id="stockAmount"
+                name="stockAmount"
+                min="1"
+                max="100"
+                step="1"
+                placeholder="Number of stocks to load"
+                value={transaction.stockAmount}
+                onChange={handleTransactionChange}
+                required
+              />
             </div>
-          )}
-          {hybridOptResult && (
-            <div style={{marginTop:'10px'}}>
-              {hybridOptResult.error ? (
-                <p className="error">{hybridOptResult.error}</p>
-              ) : (
-                <div>
-                  <h3>Hybrid Optimization Result</h3>
-                  <pre>{JSON.stringify(hybridOptResult, null, 2)}</pre>
-                </div>
-              )}
+            <div>
+              <label htmlFor="period" style={{display:'block',marginBottom:'4px'}}>Number of days to load</label>
+              <input
+                type="number"
+                id="period"
+                name="period"
+                min="1"
+                max="365"
+                step="1"
+                placeholder="Number of days to load"
+                value={transaction.period}
+                onChange={handleTransactionChange}
+                required
+              />
             </div>
-          )}
+            <div>
+              <label htmlFor="varPercent" style={{display:'block',marginBottom:'4px'}}>Value at Risk (%)</label>
+              <input
+                type="number"
+                id="varPercent"
+                name="varPercent"
+                min="1"
+                max="100"
+                step="0.1"
+                placeholder="Value at Risk (%)"
+                value={transaction.varPercent}
+                onChange={handleTransactionChange}
+                required
+              />
+            </div>
+            <div>
+              <label htmlFor="simulated" style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'4px'}}>
+                <input
+                  type="checkbox"
+                  id="simulated"
+                  name="simulated"
+                  checked={transaction.simulated}
+                  onChange={handleTransactionChange}
+                />
+                Simulated Data
+              </label>
+            </div>
+            <div>
+              <label htmlFor="qcSimulator" style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'4px'}}>
+                <input
+                  type="checkbox"
+                  id="qcSimulator"
+                  name="qcSimulator"
+                  checked={transaction.qcSimulator}
+                  onChange={handleTransactionChange}
+                />
+                QC Simulator (Aer)
+              </label>
+            </div>
+          </div>
+          <div className="form-buttons">
+            <button type="submit">Load Stocks</button>
+            <button type="button" onClick={handleOptimizePortfolio}>Optimize Portfolio Classic</button>
+            <button type="button" style={{background:'#6c47ff'}} onClick={handleHybridOptimizePortfolio}>Optimize Portfolio Hybrid</button>
+          </div>
         </form>
       )}
+      
+      {/* Form Messages */}
+      {loggedIn && (transactionError || transactionSuccess) && (
+        <div className="form-messages">
+          {transactionError && <p className="error">{transactionError}</p>}
+          {transactionSuccess && <p className="success">{transactionSuccess}</p>}
+        </div>
+      )}
+      
+      {/* Combined Optimization Results Section */}
+      {loggedIn && (optResult || hybridOptResult) && (
+        <div className="optimization-results-section">
+          <h2>Portfolio Optimization Results</h2>
+          <div className="optimization-results-container">
+            {optResult && (
+              <div className="optimization-result classic-result">
+                {optResult.error ? (
+                  <div>
+                    <h3>Classic Optimization Result</h3>
+                    <p className="error">{optResult.error}</p>
+                  </div>
+                ) : (
+                  <div>
+                    <h3>Classic Optimization Result</h3>
+                    <pre>{JSON.stringify(optResult, null, 2)}</pre>
+                  </div>
+                )}
+              </div>
+            )}
+            {hybridOptResult && (
+              <div className="optimization-result hybrid-result">
+                {hybridOptResult.error ? (
+                  <div>
+                    <h3>Hybrid Quantum Optimization Result</h3>
+                    <p className="error">{hybridOptResult.error}</p>
+                  </div>
+                ) : (
+                  <div>
+                    <h3>Hybrid Quantum Optimization Result</h3>
+                    <pre>{JSON.stringify(hybridOptResult, null, 2)}</pre>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
       {loggedIn && stockData.length > 0 && (
-        <div style={{marginTop: '2rem'}}>
-          <h2>All Stock Data (Combined Chart)</h2>
-          <Line
-            data={{
-              labels: allDates,
-              datasets
-            }}
-            options={{
-              responsive: true,
-              plugins: {
-                legend: { position: 'top' },
-                title: { display: true, text: 'All Stocks - Last 30 Days' }
-              },
-              scales: {
-                x: { title: { display: true, text: 'Date' } },
-                y: { title: { display: true, text: 'Price' } }
-              }
-            }}
-          />
-          <h2 style={{marginTop:'2rem'}}>Historic Stock Data</h2>
+        <div className="stock-data-container">
+          <div className="chart-container">
+            <h2>All Stock Data (Combined Chart)</h2>
+            <Line
+              data={{
+                labels: allDates,
+                datasets
+              }}
+              options={{
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: { position: 'top' },
+                  title: { display: true, text: 'All Stocks - Historic Price Data' }
+                },
+                scales: {
+                  x: { title: { display: true, text: 'Date' } },
+                  y: { title: { display: true, text: 'Price ($)' } }
+                }
+              }}
+              height={400}
+            />
+          </div>
+          <h2>Historic Stock Data</h2>
           {Object.keys(grouped).map((symbol) => {
             const data = grouped[symbol];
             const expanded = expandedStocks[symbol] ?? false;
             return (
-              <div key={symbol} style={{marginBottom: '2rem', border: '1px solid #eee', borderRadius: '8px', padding: '1rem'}}>
-                <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
+              <div key={symbol} className="stock-item">
+                <div className="stock-header">
                   <h3 style={{margin: 0}}>{symbol}</h3>
                   <button className="expand-btn" onClick={() => handleToggle(symbol)}>
                     {expanded ? '▼ Hide History' : '▶ Show History'}
                   </button>
                 </div>
                 {expanded && (
-                  <table style={{width: '100%', borderCollapse: 'collapse', marginTop: '1rem'}}>
+                  <table className="stock-table">
                     <thead>
                       <tr>
-                        <th style={{borderBottom: '1px solid #ccc'}}>Date</th>
-                        <th style={{borderBottom: '1px solid #ccc'}}>Close</th>
+                        <th>Date</th>
+                        <th>Close Price ($)</th>
                       </tr>
                     </thead>
                     <tbody>
                       {data.map((row) => (
                         <tr key={`${row.symbol}-${row.date}`}>
                           <td>{row.date}</td>
-                          <td>{row.close}</td>
+                          <td>${Number(row.close).toFixed(2)}</td>
                         </tr>
                       ))}
                     </tbody>
