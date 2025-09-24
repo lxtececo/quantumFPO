@@ -29,6 +29,10 @@ __pycache__/
 .venv/
 backend/src/main/python/.ipynb_checkpoints/
 backend/src/main/python/qc_setup.py
+.coverage
+coverage.xml
+htmlcov/
+.pytest_cache/
 
 # VSCode
 .vscode/

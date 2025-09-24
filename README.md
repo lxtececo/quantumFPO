@@ -1,6 +1,10 @@
 
 # Quantum Financial Portfolio Optimization (quantumFPO)
 
+[![Java CI](https://github.com/lxtececo/quantumFPO/actions/workflows/maven.yml/badge.svg)](https://github.com/lxtececo/quantumFPO/actions/workflows/maven.yml)
+[![Node.js CI](https://github.com/lxtececo/quantumFPO/actions/workflows/node.js.yml/badge.svg)](https://github.com/lxtececo/quantumFPO/actions/workflows/node.js.yml)
+[![Python Tests](https://github.com/lxtececo/quantumFPO/actions/workflows/python-tests.yml/badge.svg)](https://github.com/lxtececo/quantumFPO/actions/workflows/python-tests.yml)
+
 ## Project Overview
 This project is a full-stack application for quantum-inspired financial portfolio optimization. It features a fast JavaScript frontend (React + Vite), a Spring Boot backend for RESTful services, and a Python microservice for advanced portfolio optimization using PyPortfolioOpt.
 
@@ -128,6 +132,42 @@ mvn jacoco:check
 - **CSV Report**: `backend/target/site/jacoco/jacoco.csv` (data analysis)
 
 **Current Coverage:** ~59% instruction coverage with comprehensive error scenario testing
+
+## 🚀 Continuous Integration & Deployment
+
+The project includes comprehensive GitHub Actions workflows for automated testing:
+
+### Available CI/CD Workflows
+
+1. **🌐 Frontend Testing** (`node.js.yml`): React component tests with Jest
+2. **☕ Java Backend Testing** (`maven.yml`): Spring Boot tests with JaCoCo coverage  
+3. **🐍 Python Testing** (`python-tests.yml`): PyPortfolioOpt and quantum algorithm tests
+
+### Python CI Features
+- **Multi-version Testing**: Python 3.9, 3.10, 3.11
+- **Dependency Caching**: Fast builds with pip cache
+- **Coverage Reports**: pytest with coverage reporting
+- **Integration Tests**: Standalone script execution validation
+- **Quantum Dependencies**: Qiskit and quantum optimization libraries
+
+### Triggering CI
+Tests run automatically on:
+- Push to `main` or `develop` branches
+- Pull requests to `main` or `develop`
+- Changes to relevant source files
+
+### Local Testing Commands
+```sh
+# Python tests (matches CI exactly)
+cd backend
+python -m pytest src/test/python/ -v --cov=src/main/python
+
+# Java tests with coverage
+mvn clean test jacoco:report
+
+# Frontend tests
+npm test
+```
 
 ---
 
