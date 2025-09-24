@@ -57,3 +57,4 @@ backend/maven-status/
 
 # Exclude local configs
 *.local
+.coverage
