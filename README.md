@@ -35,16 +35,18 @@ quantumFPO/
 │   ├── 📁 public/                # Public static files
 │   ├── 📁 test/                  # Frontend tests (Jest)
 │   ├── 📁 coverage/              # Test coverage reports
-│   ├── package.json              # Frontend dependencies & scripts
-│   ├── vite.config.js            # Vite build configuration
-│   ├── jest.config.js            # Test configuration
-│   ├── eslint.config.js          # Code linting rules
-│   ├── babel.config.js           # Babel transpilation
-│   └── index.html                # Main HTML template
+│   └── 📁 node_modules/          # Frontend dependencies
 ├── 📁 .venv/                     # Python virtual environment
 ├── 📁 .vscode/                   # VS Code workspace settings
 ├── 📁 .git/                      # Git version control
 ├── pom.xml                       # Maven configuration (root level)
+├── package.json                  # Node.js dependencies & scripts
+├── package-lock.json             # Node.js dependency lock file
+├── vite.config.js                # Vite build configuration
+├── jest.config.js                # Test configuration
+├── eslint.config.js              # Code linting rules
+├── babel.config.js               # Babel transpilation
+├── index.html                    # Main HTML template
 ├── README.md                     # Project documentation
 └── TEST_COVERAGE_ENHANCEMENT_REPORT.md # Test coverage details
 ```
@@ -84,10 +86,10 @@ quantumFPO/
 
 ### Frontend (React)
 ```sh
-cd frontend
-npx jest
-# or
+# Run from root directory (package.json is now at root level)
 npm test
+# or with coverage
+npm run test:coverage
 ```
 
 ### Python Backend
@@ -137,7 +139,7 @@ cd quantumFPO
 
 ### 2. Install Frontend Dependencies
 ```sh
-cd frontend
+# Run from root directory (package.json is now at root level)
 npm install
 ```
 
