@@ -1,9 +1,10 @@
 
 # Node/Vite/React
-node_modules/
-dist/
+frontend/node_modules/
+frontend/dist/
 *.log
 .env
+frontend/coverage/
 
 # Java/Spring Boot
 backend/target/
