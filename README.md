@@ -1,6 +1,7 @@
 
 # Quantum Financial Portfolio Optimization (quantumFPO)
 
+[![Comprehensive CI/CD](https://github.com/lxtececo/quantumFPO/actions/workflows/comprehensive-ci-cd.yml/badge.svg)](https://github.com/lxtececo/quantumFPO/actions/workflows/comprehensive-ci-cd.yml)
 [![Java CI](https://github.com/lxtececo/quantumFPO/actions/workflows/maven.yml/badge.svg)](https://github.com/lxtececo/quantumFPO/actions/workflows/maven.yml)
 [![Node.js CI](https://github.com/lxtececo/quantumFPO/actions/workflows/node.js.yml/badge.svg)](https://github.com/lxtececo/quantumFPO/actions/workflows/node.js.yml)
 [![Python Tests](https://github.com/lxtececo/quantumFPO/actions/workflows/python-tests.yml/badge.svg)](https://github.com/lxtececo/quantumFPO/actions/workflows/python-tests.yml)
