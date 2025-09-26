@@ -116,37 +116,31 @@ jobs:
             ;;
         esac
 
-    - name: Build Docker image
+    - name: Build Docker image for testing
       uses: docker/build-push-action@v5
       with:
         context: ${{ matrix.context }}
         file: ${{ matrix.dockerfile }}
-        push: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' }}
+        push: false
+        load: true
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
-        platforms: linux/amd64,linux/arm64
-        load: ${{ github.event_name == 'pull_request' || github.ref != 'refs/heads/main' }}
+        platforms: linux/amd64
 
     - name: Test Docker image
       run: |
-        # Determine image reference based on whether we pushed to registry
-        if [ "${{ github.event_name }}" != "pull_request" ] && [ "${{ github.ref }}" = "refs/heads/main" ]; then
-          # Pull from registry for main branch
-          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-${{ matrix.service }}:${{ github.sha }}
-          IMAGE_REF="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-${{ matrix.service }}:${{ github.sha }}"
-        else
-          # Use locally built image for PRs and other branches
-          IMAGE_REF="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-${{ matrix.service }}:${{ github.ref_name }}"
-        fi
+        # Use the first tag from metadata output (this matches what was built)
+        IMAGE_REF=$(echo '${{ steps.meta.outputs.tags }}' | head -n1)
+        echo "Testing image: ${IMAGE_REF}"
         
         # Run container in background
         docker run -d --name test-${{ matrix.service }} \
           -p ${{ matrix.port }}:${{ matrix.port }} \
           "${IMAGE_REF}"
         
-        # Wait for container to be ready
+        # Wait for container to be ready  
         sleep 30
         
         # Test health endpoint
@@ -165,6 +159,18 @@ jobs:
         # Cleanup
         docker stop test-${{ matrix.service }}
         docker rm test-${{ matrix.service }}
+
+    - name: Build and push multi-platform image
+      if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+      uses: docker/build-push-action@v5
+      with:
+        context: ${{ matrix.context }}
+        file: ${{ matrix.dockerfile }}
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        platforms: linux/amd64,linux/arm64
 
     - name: Upload test coverage
       if: matrix.service != 'frontend'

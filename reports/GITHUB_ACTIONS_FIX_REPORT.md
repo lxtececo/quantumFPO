@@ -136,6 +136,27 @@ The GitHub Actions CI/CD pipeline has been successfully fixed and enhanced. All 
 
 The pipeline is now ready for automated testing and deployment of the quantum portfolio optimization system.
 
+## Update: Docker Image Testing Fix (September 26, 2025)
+
+### Additional Issue: "manifest unknown" Error
+The containerized CI/CD workflow was failing during Docker image testing with registry manifest errors.
+
+**Problem**: Complex image reference logic and multi-platform build conflicts prevented proper image testing.
+
+**Solution Implemented**:
+1. **Split Build Process**: 
+   - Phase 1: Single-platform build for testing (always loaded locally)
+   - Phase 2: Multi-platform build for production registry push
+2. **Simplified Test Logic**: Use metadata output tags directly
+3. **Improved Reliability**: Images always available locally for testing
+
+**Key Changes**:
+- Build Docker images locally for testing before pushing to registry  
+- Separate single-platform testing builds from multi-platform production builds
+- Eliminated complex conditional image reference logic
+- Enhanced compatibility with pull requests and main branch workflows
+
 ---
 *Report generated: December 2024*
+*Updated: September 26, 2025*
 *Status: ✅ All issues resolved, pipeline ready for testing*
