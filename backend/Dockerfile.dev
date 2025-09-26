@@ -1,0 +1,23 @@
+# Development Dockerfile for Spring Boot
+FROM eclipse-temurin:21-jdk
+
+# Set working directory
+WORKDIR /app
+
+# Copy Maven configuration
+COPY pom.xml ./
+
+# Copy source code
+COPY src ./src
+
+# Install Maven (since project doesn't use Maven Wrapper)
+RUN apt-get update && \
+    apt-get install -y maven && \
+    rm -rf /var/lib/apt/lists/* && \
+    mvn dependency:go-offline -B
+
+# Expose application and debug ports
+EXPOSE 8080 5005
+
+# Run with Spring Boot DevTools (debug options set via environment variables)
+CMD ["mvn", "spring-boot:run"]

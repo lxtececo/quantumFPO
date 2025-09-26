@@ -1,0 +1,64 @@
+services:
+  # Frontend (React + Vite development server)
+  frontend-dev:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: quantumfpo-frontend-dev
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - VITE_API_URL=http://localhost:8080
+    networks:
+      - quantumfpo-dev-network
+    restart: unless-stopped
+    command: npm run dev
+
+  # Java Backend (Spring Boot with dev profile)
+  java-backend-dev:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: quantumfpo-java-backend-dev
+    ports:
+      - "8080:8080"
+      - "5005:5005" # Debug port
+    volumes:
+      - ./backend:/app
+      - ~/.m2:/root/.m2
+    environment:
+      - SPRING_PROFILES_ACTIVE=development
+      - PYTHON_API_BASE_URL=http://python-backend-dev:8002
+      - JAVA_TOOL_OPTIONS=
+    depends_on:
+      - python-backend-dev
+    networks:
+      - quantumfpo-dev-network
+    restart: unless-stopped
+
+  # Python Backend (FastAPI with reload)
+  python-backend-dev:
+    build:
+      context: .
+      dockerfile: ./backend/src/main/python/Dockerfile.dev
+    container_name: quantumfpo-python-backend-dev
+    ports:
+      - "8002:8002"
+    volumes:
+      - ./backend/src/main/python:/app
+    environment:
+      - PYTHONPATH=/app
+      - ENVIRONMENT=development
+    networks:
+      - quantumfpo-dev-network
+    restart: unless-stopped
+    command: uvicorn portfolio_api:app --host 0.0.0.0 --port 8002 --reload
+
+networks:
+  quantumfpo-dev-network:
+    driver: bridge
+    name: quantumfpo-dev-network

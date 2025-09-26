@@ -1,0 +1,79 @@
+services:
+  # Frontend (React + Vite + Nginx)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: quantumfpo-frontend
+    ports:
+      - "3000:80"
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      - java-backend
+    networks:
+      - quantumfpo-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Java Backend (Spring Boot)
+  java-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: quantumfpo-java-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - PYTHON_API_BASE_URL=http://python-backend:8002
+      - JAVA_OPTS=-Xmx512m -Xms256m
+    depends_on:
+      - python-backend
+    networks:
+      - quantumfpo-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # Python Backend (FastAPI)
+  python-backend:
+    build:
+      context: .
+      dockerfile: ./backend/src/main/python/Dockerfile
+    container_name: quantumfpo-python-backend
+    ports:
+      - "8002:8002"
+    environment:
+      - PYTHONPATH=/app
+      - ENVIRONMENT=docker
+    networks:
+      - quantumfpo-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+networks:
+  quantumfpo-network:
+    driver: bridge
+    name: quantumfpo-network
+
+volumes:
+  # Optional: Add volumes for persistent data if needed
+  java-logs:
+    driver: local
+  python-logs:
+    driver: local

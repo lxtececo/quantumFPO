@@ -1,7 +1,7 @@
 
 # Quantum Financial Portfolio Optimization (quantumFPO)
 
-[![Comprehensive CI/CD](https://github.com/lxtececo/quantumFPO/actions/workflows/comprehensive-ci-cd.yml/badge.svg)](https://github.com/lxtececo/quantumFPO/actions/workflows/comprehensive-ci-cd.yml)
+[![Containerized CI/CD](https://github.com/lxtececo/quantumFPO/actions/workflows/containerized-ci-cd.yml/badge.svg)](https://github.com/lxtececo/quantumFPO/actions/workflows/containerized-ci-cd.yml)
 [![Java CI](https://github.com/lxtececo/quantumFPO/actions/workflows/maven.yml/badge.svg)](https://github.com/lxtececo/quantumFPO/actions/workflows/maven.yml)
 [![Node.js CI](https://github.com/lxtececo/quantumFPO/actions/workflows/node.js.yml/badge.svg)](https://github.com/lxtececo/quantumFPO/actions/workflows/node.js.yml)
 [![Python Tests](https://github.com/lxtececo/quantumFPO/actions/workflows/python-tests.yml/badge.svg)](https://github.com/lxtececo/quantumFPO/actions/workflows/python-tests.yml)
@@ -58,7 +58,15 @@ quantumFPO/
 │   └── TEST_COVERAGE_ENHANCEMENT_REPORT.md
 ├── 📁 scripts/                   # Build & utility scripts
 │   ├── quick-test.sh             # Cross-platform testing script
-│   └── run-all-tests.ps1         # PowerShell test runner
+│   ├── run-all-tests.ps1         # PowerShell test runner
+│   ├── container-manager.sh      # Container management (Linux/macOS)
+│   └── container-manager.ps1     # Container management (Windows)
+├── 📁 .github/workflows/         # CI/CD pipelines
+│   └── containerized-ci-cd.yml   # Docker-based CI/CD pipeline
+├── 🐳 docker-compose.yml          # Production container orchestration
+├── 🐳 docker-compose.dev.yml      # Development container orchestration
+├── 🐳 CONTAINERIZATION_COMPLETE.md # Complete containerization guide
+├── 🐳 CONTAINERIZATION_SUMMARY.md  # Containerization summary
 ├── 📁 .venv/                     # Python virtual environment
 ├── 📁 .vscode/                   # VS Code workspace settings
 ├── 📁 .git/                      # Git version control
@@ -70,8 +78,10 @@ quantumFPO/
 - **🚀 Frontend (React + Vite)**: Modern, fast frontend with hot reload, component testing, and responsive design
 - **☕ Backend (Spring Boot)**: RESTful API server with dependency injection, auto-configuration, and comprehensive testing
 - **🐍 Python FastAPI Service**: High-performance REST API for quantum and classical portfolio optimization with comprehensive logging
+- **🐳 Containerization**: Complete Docker setup with multi-stage builds, development/production environments, and container orchestration
 - **🧪 Testing Suite**: Complete test coverage across all layers with unit, integration, and end-to-end testing
 - **⚡ Development Tools**: Modern toolchain with Vite, Jest, ESLint, Maven, and Python virtual environments
+- **🚀 CI/CD Pipelines**: Automated testing, building, security scanning, and deployment with both standard and containerized workflows
 - **📊 Documentation**: Comprehensive development reports and testing documentation
 
 ---
@@ -174,26 +184,36 @@ mvn jacoco:check
 
 ## 🚀 Continuous Integration & Deployment
 
-The project includes comprehensive GitHub Actions workflows for automated testing:
+The project includes comprehensive GitHub Actions workflows for automated testing and deployment:
 
-### Available CI/CD Workflows
+### 🚀 Primary CI/CD Pipeline
+
+**🐳 Containerized CI/CD** (`containerized-ci-cd.yml`): Modern Docker-based pipeline with:
+- **Multi-service builds** with parallel execution and caching
+- **Security scanning** with Trivy vulnerability detection
+- **Integration testing** with Docker Compose orchestration
+- **Multi-architecture support** (amd64/arm64)
+- **Performance testing** and deployment automation
+- **Staged deployment** (staging → production with approvals)
+
+### 📊 Individual Service Workflows
 
 1. **🌐 Frontend Testing** (`node.js.yml`): React component tests with Jest
 2. **☕ Java Backend Testing** (`maven.yml`): Spring Boot tests with JaCoCo coverage  
 3. **🐍 Python Testing** (`python-tests.yml`): PyPortfolioOpt and quantum algorithm tests
 
-### Python CI Features
-- **Python 3.13 Testing**: Latest Python version compatibility
-- **Dependency Caching**: Fast builds with pip cache
-- **Coverage Reports**: pytest with coverage reporting
-- **Integration Tests**: Standalone script execution validation
-- **Quantum Dependencies**: Qiskit and quantum optimization libraries
+### 🔄 Pipeline Features
+- **Python 3.11+ Testing**: Modern Python version compatibility
+- **Docker Layer Caching**: Fast builds with optimized caching
+- **Coverage Reports**: Comprehensive test coverage across all services
+- **Security Scanning**: Automated vulnerability detection
+- **Container Registry**: Automated image builds and publishing
 
 ### Triggering CI
-Tests run automatically on:
+Tests and deployments run automatically on:
 - Push to `main` or `develop` branches
 - Pull requests to `main` or `develop`
-- Changes to relevant source files
+- Changes to relevant source files or Docker configurations
 
 ### Local Testing Commands
 ```sh
@@ -210,12 +230,39 @@ npm test
 
 ---
 
-## Quick Setup Instructions
+## 🚀 Quick Setup Instructions
 
+### 🐳 Docker Setup (Recommended)
+
+**Prerequisites:** Docker Desktop (Windows/macOS) or Docker Engine (Linux)
+
+```bash
+# Clone the repository
+git clone https://github.com/lxtececo/quantumFPO.git
+cd quantumFPO
+
+# Start development environment (Linux/macOS)
+./scripts/container-manager.sh dev-start
+
+# Start development environment (Windows)
+.\scripts\container-manager.ps1 dev-start
+
+# Or use Docker Compose directly
+docker-compose -f docker-compose.dev.yml up -d
+```
+
+**Service URLs:**
+- Frontend: http://localhost:5173
+- Java API: http://localhost:8080
+- Python API: http://localhost:8002
+
+📖 **See [CONTAINERIZATION_COMPLETE.md](./CONTAINERIZATION_COMPLETE.md) for the complete Docker setup guide**
+
+### 📦 Manual Setup (Traditional)
 
 ### Prerequisites
 - Node.js (v18+ recommended)
-- Java (JDK 17+ recommended)
+- Java (JDK 17+ recommended)  
 - Python (3.8+ recommended)
 - Git
 - [Scoop](https://scoop.sh/#/) (recommended Windows command line installer)
