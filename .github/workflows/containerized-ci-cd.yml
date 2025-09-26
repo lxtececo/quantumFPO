@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: [ main, develop ]
 
+permissions:
+  contents: read
+  packages: write
+  security-events: write
+  actions: read
+
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
@@ -115,22 +121,30 @@ jobs:
       with:
         context: ${{ matrix.context }}
         file: ${{ matrix.dockerfile }}
-        push: true
+        push: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' }}
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
         platforms: linux/amd64,linux/arm64
+        load: ${{ github.event_name == 'pull_request' || github.ref != 'refs/heads/main' }}
 
     - name: Test Docker image
       run: |
-        # Pull the built image
-        docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-${{ matrix.service }}:${{ github.sha }}
+        # Determine image reference based on whether we pushed to registry
+        if [ "${{ github.event_name }}" != "pull_request" ] && [ "${{ github.ref }}" = "refs/heads/main" ]; then
+          # Pull from registry for main branch
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-${{ matrix.service }}:${{ github.sha }}
+          IMAGE_REF="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-${{ matrix.service }}:${{ github.sha }}"
+        else
+          # Use locally built image for PRs and other branches
+          IMAGE_REF="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-${{ matrix.service }}:${{ github.ref_name }}"
+        fi
         
         # Run container in background
         docker run -d --name test-${{ matrix.service }} \
           -p ${{ matrix.port }}:${{ matrix.port }} \
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-${{ matrix.service }}:${{ github.sha }}
+          "${IMAGE_REF}"
         
         # Wait for container to be ready
         sleep 30
