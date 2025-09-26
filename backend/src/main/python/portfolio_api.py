@@ -3,7 +3,7 @@ FastAPI service for quantum portfolio optimization.
 Replaces temporary JSON file communication with REST API endpoints.
 """
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional
@@ -530,7 +530,7 @@ async def optimize_hybrid(request: OptimizeRequest):
             detail=f"Hybrid optimization failed: {str(e)}"
         )
 
-@app.post("/api/optimize/classical/async")
+@app.post("/api/optimize/classical/async", status_code=202)
 async def optimize_classical_async(request: OptimizeRequest, background_tasks: BackgroundTasks):
     """
     Start classical portfolio optimization as background task.
@@ -540,7 +540,7 @@ async def optimize_classical_async(request: OptimizeRequest, background_tasks: B
     background_tasks.add_task(run_classical_optimization, job_id, request)
     return {"job_id": job_id, "status": "pending"}
 
-@app.post("/api/optimize/hybrid/async")
+@app.post("/api/optimize/hybrid/async", status_code=202)
 async def optimize_hybrid_async(request: OptimizeRequest, background_tasks: BackgroundTasks):
     """
     Start hybrid portfolio optimization as background task.

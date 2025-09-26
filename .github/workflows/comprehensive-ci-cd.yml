@@ -305,13 +305,13 @@ jobs:
     - name: Start Python FastAPI service
       run: |
         cd backend/src/main/python
-        python portfolio_api.py &
+        python -m uvicorn portfolio_api:app --host 0.0.0.0 --port 8002 &
         echo "PYTHON_API_PID=$!" >> $GITHUB_ENV
         sleep 10  # Wait for service to start
 
     - name: Wait for Python API to be ready
       run: |
-        timeout 30 bash -c 'until curl -s http://localhost:8001/health > /dev/null; do sleep 1; done'
+        timeout 30 bash -c 'until curl -s http://localhost:8002/health > /dev/null; do sleep 1; done'
 
     - name: Run end-to-end integration tests
       run: |

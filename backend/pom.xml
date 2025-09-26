@@ -104,9 +104,18 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
                     <useSystemClassLoader>false</useSystemClassLoader>
-                    <argLine>${surefireArgLine}</argLine>
+                    <!-- Enhanced argLine with JDK 21+ compatibility and warning suppressions -->
+                    <argLine>${surefireArgLine} 
+                        -XX:+EnableDynamicAgentLoading 
+                        -Djdk.instrument.traceUsage=false
+                        -Dnet.bytebuddy.experimental=true
+                        --add-opens java.base/java.lang=ALL-UNNAMED
+                        --add-opens java.base/java.util=ALL-UNNAMED
+                    </argLine>
                     <systemPropertyVariables>
                         <jacoco-agent.destfile>target/jacoco.exec</jacoco-agent.destfile>
+                        <!-- Mockito configuration for JDK 21+ -->
+                        <mockito.mock.maker>inline</mockito.mock.maker>
                     </systemPropertyVariables>
                 </configuration>
             </plugin>

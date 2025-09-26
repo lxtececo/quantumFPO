@@ -1,6 +1,7 @@
 package com.quantumfpo.stocks.controller;
 
 import com.quantumfpo.stocks.service.AlphaVantageService;
+import com.quantumfpo.stocks.service.PythonApiService;
 import com.quantumfpo.stocks.model.StockData;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,8 +17,11 @@ import org.springframework.http.MediaType;
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -32,10 +36,23 @@ class StockControllerTest {
     @MockBean
     private AlphaVantageService alphaVantageService;
 
+    @MockBean
+    private PythonApiService pythonApiService;
+
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext).build();
-        Mockito.reset(alphaVantageService);
+        Mockito.reset(alphaVantageService, pythonApiService);
+        
+        // Mock Python service to be healthy by default to prevent HTTP calls
+        when(pythonApiService.isHealthy()).thenReturn(true);
+        
+        // Mock optimize methods to return success results by default
+        Map<String, Object> defaultResult = new HashMap<>();
+        defaultResult.put("success", true);
+        defaultResult.put("message", "Mock optimization completed successfully");
+        when(pythonApiService.optimizeClassical(anyList(), anyDouble())).thenReturn(defaultResult);
+        when(pythonApiService.optimizeHybrid(anyList(), anyDouble(), anyBoolean())).thenReturn(defaultResult);
     }
 
     @Test
@@ -91,17 +108,18 @@ class StockControllerTest {
     void testOptimizePortfolioEndpointWithEmptyDatabase() throws Exception {
         String requestJson = "{\"stocks\":[\"AAPL\"],\"varPercent\":5}";
 
-        // No stocks loaded in database, should return 200 with error in response body
+        // No stocks loaded in database and no mocks setup, should return 400 for no data
         mockMvc.perform(post("/api/stocks/optimize")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestJson))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.error").exists());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").exists())
+                .andExpect(jsonPath("$.error").value("No stock data available for optimization"));
     }
     
     @Test
     void testHybridOptimizePortfolioEndpoint() throws Exception {
-        // Test the hybrid optimization endpoint that wasn't covered
+        // Test the hybrid optimization endpoint
         List<StockData> mockData = Arrays.asList(
             new StockData("SIM_AAPL", LocalDate.of(2025, 9, 23), 150.0),
             new StockData("SIM_AAPL", LocalDate.of(2025, 9, 24), 152.0)
@@ -110,12 +128,12 @@ class StockControllerTest {
         when(alphaVantageService.fetchStockHistory("SIM_AAPL", 30))
             .thenReturn(mockData);
 
-        // Note: This will likely return 500 due to Python script execution in test environment
-        // but we're testing the endpoint path and error handling
+        // With proper mocking, this should return 200 OK (successful optimization)
         mockMvc.perform(post("/api/stocks/hybrid-optimize")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"stocks\":[\"SIM_AAPL\"],\"varPercent\":0.05,\"qcSimulator\":true}"))
-                .andExpect(status().isInternalServerError()); // Expecting 500 due to Python execution
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
     }
     
     @Test

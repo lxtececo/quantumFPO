@@ -32,7 +32,13 @@ public class StockController {
     @PostMapping("/load")
     public ResponseEntity<List<StockData>> loadStocks(@RequestBody StockRequest request) {
         try {
-            int period = request.getPeriod() > 0 ? request.getPeriod() : 30;
+            // Validate period parameter
+            if (request.getPeriod() <= 0) {
+                logger.warn("Invalid period parameter: {}", request.getPeriod());
+                return ResponseEntity.badRequest().body(Collections.emptyList());
+            }
+            
+            int period = request.getPeriod();
             List<StockData> allData = new ArrayList<>();
             lastLoadedSymbols = new ArrayList<>(request.getStocks());
             
@@ -62,21 +68,44 @@ public class StockController {
     @PostMapping("/optimize")
     public ResponseEntity<Map<String, Object>> optimizePortfolio(@RequestBody OptimizeRequest request) {
         try {
-            // Check Python API health first
+            // Validate request parameters first (immediate validation)
+            if (request.getVarPercentRaw() == null) {
+                logger.warn("[REST] Missing required varPercent parameter");
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put(ERROR_KEY, "VaR percent is required");
+                return ResponseEntity.badRequest().body(errorResponse);
+            }
+            
+            if (request.getVarPercent() < 0 || request.getVarPercent() > 100) {
+                logger.warn("[REST] Invalid varPercent value: {}", request.getVarPercent());
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put(ERROR_KEY, "VaR percent must be between 0 and 100");
+                return ResponseEntity.badRequest().body(errorResponse);
+            }
+            
+            // Validate stocks list
+            if (request.getStocks() == null || request.getStocks().isEmpty()) {
+                logger.warn("[REST] No stocks specified for optimization");
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put(ERROR_KEY, "No stocks specified for optimization");
+                return ResponseEntity.badRequest().body(errorResponse);
+            }
+            
+            // Check Python API health before processing (infrastructure dependency)
             if (!pythonApiService.isHealthy()) {
                 logger.warn("[REST] Python API service is not available");
                 Map<String, Object> errorResponse = new HashMap<>();
-                errorResponse.put(ERROR_KEY, "Python optimization service is not available. Please ensure it's running.");
+                errorResponse.put(ERROR_KEY, "Python optimization service is not available");
                 return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(errorResponse);
             }
             
-            // Prepare stock data
+            // Prepare and validate stock data (business logic validation)
             List<Map<String, Object>> stockData = prepareStockDataForApi(request);
             
             if (stockData.isEmpty()) {
                 logger.warn("[REST] No stock data found for optimization");
                 Map<String, Object> errorResponse = new HashMap<>();
-                errorResponse.put(ERROR_KEY, "No stock data available for optimization. Please load stocks first.");
+                errorResponse.put(ERROR_KEY, "No stock data available for optimization");
                 return ResponseEntity.badRequest().body(errorResponse);
             }
             
@@ -98,30 +127,61 @@ public class StockController {
     @PostMapping("/hybrid-optimize")
     public ResponseEntity<Map<String, Object>> hybridOptimizePortfolio(@RequestBody OptimizeRequest request) {
         try {
-            // Check Python API health first
+            // Validate request parameters first (immediate validation)
+            if (request.getVarPercentRaw() == null) {
+                logger.warn("[REST] Missing required varPercent parameter for hybrid");
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put(ERROR_KEY, "VaR percent is required");
+                return ResponseEntity.badRequest().body(errorResponse);
+            }
+            
+            if (request.getVarPercent() < 0 || request.getVarPercent() > 100) {
+                logger.warn("[REST] Invalid varPercent value for hybrid: {}", request.getVarPercent());
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put(ERROR_KEY, "VaR percent must be between 0 and 100");
+                return ResponseEntity.badRequest().body(errorResponse);
+            }
+            
+            // Validate stocks list
+            if (request.getStocks() == null || request.getStocks().isEmpty()) {
+                logger.warn("[REST] No stocks specified for hybrid optimization");
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put(ERROR_KEY, "No stocks specified for optimization");
+                return ResponseEntity.badRequest().body(errorResponse);
+            }
+            
+            // Validate qcSimulator parameter - it's required for hybrid optimization
+            if (request.getQcSimulatorRaw() == null) {
+                logger.warn("[REST] Missing required qcSimulator parameter for hybrid");
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put(ERROR_KEY, "qcSimulator parameter is required for hybrid optimization");
+                return ResponseEntity.badRequest().body(errorResponse);
+            }
+            
+            // Check Python API health before processing (infrastructure dependency)
             if (!pythonApiService.isHealthy()) {
                 logger.warn("[REST] Python API service is not available for hybrid optimization");
                 Map<String, Object> errorResponse = new HashMap<>();
-                errorResponse.put(ERROR_KEY, "Python optimization service is not available. Please ensure it's running.");
+                errorResponse.put(ERROR_KEY, "Python optimization service is not available");
                 return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(errorResponse);
             }
             
-            // Prepare stock data
+            // Prepare and validate stock data (business logic validation)
             List<Map<String, Object>> stockData = prepareStockDataForApi(request);
             
             if (stockData.isEmpty()) {
                 logger.warn("[REST] No stock data found for hybrid optimization");
                 Map<String, Object> errorResponse = new HashMap<>();
-                errorResponse.put(ERROR_KEY, "No stock data available for optimization. Please load stocks first.");
+                errorResponse.put(ERROR_KEY, "No stock data available for optimization");
                 return ResponseEntity.badRequest().body(errorResponse);
             }
             
             // Call Python REST API for hybrid optimization
-            logger.info("[REST] Starting hybrid portfolio optimization via REST API (simulator: {})", request.isQcSimulator());
+            logger.info("[REST] Starting hybrid portfolio optimization via REST API (simulator: {})", request.getQcSimulatorValue());
             Map<String, Object> result = pythonApiService.optimizeHybrid(
                 stockData, 
                 request.getVarPercent(), 
-                request.isQcSimulator()
+                request.getQcSimulatorValue()
             );
             
             logger.info("[REST] Hybrid optimization completed successfully via REST API");
@@ -160,8 +220,29 @@ public class StockController {
         List<String> symbols = (request.getStocks() != null && !request.getStocks().isEmpty()) 
             ? request.getStocks() : lastLoadedSymbols;
         
+        if (symbols == null || symbols.isEmpty()) {
+            logger.warn("[REST] No symbols specified for optimization");
+            return stockData;
+        }
+        
         for (String symbol : symbols) {
             List<StockData> data = database.getOrDefault(symbol, Collections.emptyList());
+            
+            // If no data in database, try to fetch from AlphaVantageService
+            if (data.isEmpty()) {
+                logger.info("[REST] No cached data for {}, fetching from AlphaVantage", symbol);
+                try {
+                    data = alphaVantageService.fetchStockHistory(symbol, 30);
+                    if (!data.isEmpty()) {
+                        database.put(symbol, data); // Cache the data
+                        logger.info("[REST] Fetched and cached {} records for {}", data.size(), symbol);
+                    }
+                } catch (Exception e) {
+                    logger.warn("[REST] Failed to fetch data for symbol {}: {}", symbol, e.getMessage());
+                    continue; // Skip this symbol and try the next one
+                }
+            }
+            
             for (StockData sd : data) {
                 Map<String, Object> row = new HashMap<>();
                 row.put("symbol", sd.getSymbol());
