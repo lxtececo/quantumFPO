@@ -40,7 +40,7 @@ class PythonApiServiceTest {
         // Set the base URL using reflection
         Field baseUrlField = PythonApiService.class.getDeclaredField("pythonApiBaseUrl");
         baseUrlField.setAccessible(true);
-        baseUrlField.set(pythonApiService, "http://localhost:8001");
+        baseUrlField.set(pythonApiService, "http://localhost:8002");
     }
 
     @Test
@@ -70,7 +70,7 @@ class PythonApiServiceTest {
         
         // Verify RestTemplate was called with correct parameters
         verify(restTemplate).exchange(
-            eq("http://localhost:8001/api/optimize/classical"),
+            eq("http://localhost:8002/api/optimize/classical"),
             eq(HttpMethod.POST),
             argThat(entity -> {
                 HttpHeaders headers = entity.getHeaders();
@@ -180,7 +180,7 @@ class PythonApiServiceTest {
         
         // Verify RestTemplate was called with correct parameters
         verify(restTemplate).exchange(
-            eq("http://localhost:8001/api/optimize/hybrid"),
+            eq("http://localhost:8002/api/optimize/hybrid"),
             eq(HttpMethod.POST),
             argThat(entity -> {
                 Map<String, Object> body = (Map<String, Object>) entity.getBody();
@@ -278,7 +278,7 @@ class PythonApiServiceTest {
         
         // Verify RestTemplate was called with correct URL
         verify(restTemplate).exchange(
-            eq("http://localhost:8001/health"),
+            eq("http://localhost:8002/health"),
             eq(HttpMethod.GET),
             any(HttpEntity.class),
             eq(Map.class)

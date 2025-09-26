@@ -173,7 +173,7 @@ body {
 
 .button-group button {
   flex: 0 0 auto;
-  min-width: fit-content;
+  min-width: -webkit-fill-available;
 }
 
 /* Mobile-first approach */

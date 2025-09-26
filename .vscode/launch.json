@@ -1,0 +1,148 @@
+{
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Spring Boot-StocksApplication<stocks-backend>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.quantumfpo.stocks.StocksApplication",
+            "projectName": "stocks-backend",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "type": "node",
+            "name": "Jest: Run All Tests",
+            "request": "launch",
+            "cwd": "${workspaceFolder}/frontend",
+            "runtimeExecutable": "npx",
+            "runtimeArgs": [
+                "jest",
+                "--runInBand"
+            ],
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "skipFiles": [
+                "<node_internals>/**",
+                "${workspaceFolder}/frontend/node_modules/**"
+            ]
+        },
+        {
+            "type": "node",
+            "name": "Jest: Watch Mode",
+            "request": "launch",
+            "cwd": "${workspaceFolder}/frontend",
+            "runtimeExecutable": "npx",
+            "runtimeArgs": [
+                "jest",
+                "--watch",
+                "--runInBand"
+            ],
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "skipFiles": [
+                "<node_internals>/**",
+                "${workspaceFolder}/frontend/node_modules/**"
+            ]
+        },
+        {
+            "type": "node",
+            "name": "Jest: Debug Current Test",
+            "request": "launch",
+            "cwd": "${workspaceFolder}/frontend",
+            "runtimeExecutable": "npx",
+            "runtimeArgs": [
+                "jest",
+                "--runInBand",
+                "${relativeFile}"
+            ],
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "skipFiles": [
+                "<node_internals>/**",
+                "${workspaceFolder}/frontend/node_modules/**"
+            ]
+        },
+        {
+            "name": "Python: FastAPI Portfolio API",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/backend/src/main/python/portfolio_api.py",
+            "cwd": "${workspaceFolder}/backend/src/main/python",
+            "python": "${workspaceFolder}/.venv/Scripts/python.exe",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/backend/src/main/python"
+            },
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "openOnSessionStart",
+            "justMyCode": false
+        },
+        {
+            "name": "Python: FastAPI Portfolio API (Debug)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/backend/src/main/python/portfolio_api.py",
+            "cwd": "${workspaceFolder}/backend/src/main/python",
+            "python": "${workspaceFolder}/.venv/Scripts/python.exe",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/backend/src/main/python"
+            },
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "openOnSessionStart",
+            "justMyCode": true,
+            "stopOnEntry": false
+        },
+        {
+            "name": "Python: Uvicorn FastAPI Server",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "uvicorn",
+            "args": [
+                "portfolio_api:app",
+                "--host",
+                "0.0.0.0",
+                "--port",
+                "8002",
+                "--reload",
+                "--log-level",
+                "info"
+            ],
+            "cwd": "${workspaceFolder}/backend/src/main/python",
+            "python": "${workspaceFolder}/.venv/Scripts/python.exe",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/backend/src/main/python"
+            },
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "openOnSessionStart",
+            "justMyCode": false
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Launch Full Backend Stack",
+            "configurations": [
+                "Python: Uvicorn FastAPI Server",
+                "Spring Boot-StocksApplication<stocks-backend>"
+            ],
+            "stopAll": true,
+            "presentation": {
+                "hidden": false,
+                "group": "Backend",
+                "order": 1
+            }
+        },
+        {
+            "name": "Launch Full Stack (Backend + Python Debug)",
+            "configurations": [
+                "Python: FastAPI Portfolio API (Debug)",
+                "Spring Boot-StocksApplication<stocks-backend>"
+            ],
+            "stopAll": true,
+            "presentation": {
+                "hidden": false,
+                "group": "Backend",
+                "order": 2
+            }
+        }
+    ]
+}

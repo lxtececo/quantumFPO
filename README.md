@@ -29,7 +29,8 @@ quantumFPO/
 │   ├── 📁 src/main/python/       # Python optimization scripts
 │   │   ├── classic_portfolio_opt.py   # Classical optimization
 │   │   ├── hybrid_portfolio_opt.py    # Quantum-classical hybrid
-│   │   └── qc_setup.py               # Quantum computing setup
+│   │   ├── portfolio_api.py           # FastAPI REST service
+│   │   └── requirements.txt           # Python dependencies
 │   └── 📁 src/test/              # Backend tests
 │       ├── 📁 java/              # Java unit & integration tests
 │       └── 📁 python/            # Python algorithm tests
@@ -41,28 +42,37 @@ quantumFPO/
 │   ├── 📁 public/                # Public static files
 │   ├── 📁 test/                  # Frontend tests (Jest)
 │   ├── 📁 coverage/              # Test coverage reports
-│   └── 📁 node_modules/          # Frontend dependencies
+│   └── package.json              # Frontend dependencies
+├── 📁 reports/                   # 📊 Development & Testing Reports
+│   ├── BACKEND_ARCHITECTURE_ENHANCEMENT_REPORT.md
+│   ├── BACKEND_TEST_ENHANCEMENT_REPORT.md  
+│   ├── COMPREHENSIVE_TESTING_STRATEGY.md
+│   ├── FINAL_COVERAGE_REPORT.md
+│   ├── GITHUB_ACTIONS_FIX_REPORT.md
+│   ├── GITHUB_WORKFLOW_FIX_REPORT.md
+│   ├── INTEGRATION_E2E_TEST_AUTOMATION_REPORT.md
+│   ├── JAVA_BACKEND_COVERAGE_REPORT.md
+│   ├── JAVA_TEST_FIX_REPORT.md
+│   ├── PYTHON_CI_IMPLEMENTATION_REPORT.md
+│   ├── PYTHON_TEST_DEPENDENCY_FIX_REPORT.md
+│   └── TEST_COVERAGE_ENHANCEMENT_REPORT.md
+├── 📁 scripts/                   # Build & utility scripts
+│   ├── quick-test.sh             # Cross-platform testing script
+│   └── run-all-tests.ps1         # PowerShell test runner
 ├── 📁 .venv/                     # Python virtual environment
 ├── 📁 .vscode/                   # VS Code workspace settings
 ├── 📁 .git/                      # Git version control
-├── package.json                  # Node.js dependencies & scripts
-├── package-lock.json             # Node.js dependency lock file
-├── vite.config.js                # Vite build configuration
-├── jest.config.js                # Test configuration
-├── eslint.config.js              # Code linting rules
-├── babel.config.js               # Babel transpilation
-├── index.html                    # Main HTML template
-├── README.md                     # Project documentation
-└── TEST_COVERAGE_ENHANCEMENT_REPORT.md # Test coverage details
+└── README.md                     # 📖 Project documentation
 ```
 
 ### Architecture Components
 
 - **🚀 Frontend (React + Vite)**: Modern, fast frontend with hot reload, component testing, and responsive design
 - **☕ Backend (Spring Boot)**: RESTful API server with dependency injection, auto-configuration, and comprehensive testing
-- **🐍 Python Microservices**: Quantum and classical portfolio optimization algorithms with scientific computing libraries
+- **🐍 Python FastAPI Service**: High-performance REST API for quantum and classical portfolio optimization with comprehensive logging
 - **🧪 Testing Suite**: Complete test coverage across all layers with unit, integration, and end-to-end testing
 - **⚡ Development Tools**: Modern toolchain with Vite, Jest, ESLint, Maven, and Python virtual environments
+- **📊 Documentation**: Comprehensive development reports and testing documentation
 
 ---
 
@@ -86,6 +96,34 @@ quantumFPO/
 
 ---
 
+
+---
+
+## 📊 Development Reports
+
+The `reports/` folder contains detailed documentation of development processes, testing strategies, and implementation decisions:
+
+### Testing & Quality Assurance
+- **[Comprehensive Testing Strategy](reports/COMPREHENSIVE_TESTING_STRATEGY.md)**: Overall testing approach and methodologies
+- **[Final Coverage Report](reports/FINAL_COVERAGE_REPORT.md)**: Complete test coverage analysis across all components
+- **[Test Coverage Enhancement Report](reports/TEST_COVERAGE_ENHANCEMENT_REPORT.md)**: Detailed coverage improvements and metrics
+
+### Backend Development
+- **[Backend Architecture Enhancement](reports/BACKEND_ARCHITECTURE_ENHANCEMENT_REPORT.md)**: Spring Boot architecture improvements
+- **[Backend Test Enhancement](reports/BACKEND_TEST_ENHANCEMENT_REPORT.md)**: Java backend testing enhancements
+- **[Java Backend Coverage Report](reports/JAVA_BACKEND_COVERAGE_REPORT.md)**: JUnit and integration test coverage
+- **[Java Test Fix Report](reports/JAVA_TEST_FIX_REPORT.md)**: Java testing framework fixes and improvements
+
+### Python Development
+- **[Python CI Implementation Report](reports/PYTHON_CI_IMPLEMENTATION_REPORT.md)**: Python continuous integration setup
+- **[Python Test Dependency Fix](reports/PYTHON_TEST_DEPENDENCY_FIX_REPORT.md)**: Python testing environment fixes
+
+### CI/CD & DevOps
+- **[GitHub Actions Fix Report](reports/GITHUB_ACTIONS_FIX_REPORT.md)**: GitHub Actions workflow improvements
+- **[GitHub Workflow Fix Report](reports/GITHUB_WORKFLOW_FIX_REPORT.md)**: CI/CD pipeline enhancements
+- **[Integration E2E Test Automation](reports/INTEGRATION_E2E_TEST_AUTOMATION_REPORT.md)**: End-to-end testing automation
+
+---
 
 ## Running Tests
 
@@ -213,7 +251,7 @@ npm run dev
 ```
 Frontend will run at [http://localhost:5173](http://localhost:5173).
 
-### 4. Setup Python Environment
+### 4. Setup Python Environment & Start FastAPI Service
 ```sh
 # Create virtual environment in project root
 python -m venv .venv
@@ -225,8 +263,12 @@ source .venv/bin/activate
 # Install Python dependencies
 cd backend/src/main/python
 pip install -r requirements.txt
-# Or manually: pip install pypfopt pandas numpy scikit-learn qiskit pytest
+# Or manually: pip install pypfopt pandas numpy scikit-learn qiskit pytest fastapi uvicorn
+
+# Start the Python FastAPI service (runs on port 8002)
+python -m uvicorn portfolio_api:app --host 0.0.0.0 --port 8002 --reload
 ```
+Python FastAPI service will run at [http://localhost:8002](http://localhost:8002).
 
 ### 5. Start the Spring Boot Backend
 ```sh

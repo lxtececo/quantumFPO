@@ -30,9 +30,13 @@ public class PythonApiService {
         try {
             logger.info("[PythonAPI] Starting classical optimization");
             
+            // Convert percentage to decimal (e.g., 5.0% -> 0.05)
+            double varPercentDecimal = varPercent / 100.0;
+            logger.info("[PythonAPI] Converting VaR from {}% to decimal: {}", varPercent, varPercentDecimal);
+            
             Map<String, Object> request = new HashMap<>();
             request.put("stock_data", stockData);
-            request.put("var_percent", varPercent);
+            request.put("var_percent", varPercentDecimal);
             
             String endpoint = pythonApiBaseUrl + "/api/optimize/classical";
             
@@ -65,9 +69,13 @@ public class PythonApiService {
         try {
             logger.info("[PythonAPI] Starting hybrid optimization (simulator: {})", qcSimulator);
             
+            // Convert percentage to decimal (e.g., 5.0% -> 0.05)
+            double varPercentDecimal = varPercent / 100.0;
+            logger.info("[PythonAPI] Converting VaR from {}% to decimal: {}", varPercent, varPercentDecimal);
+            
             Map<String, Object> request = new HashMap<>();
             request.put("stock_data", stockData);
-            request.put("var_percent", varPercent);
+            request.put("var_percent", varPercentDecimal);
             request.put("qc_simulator", qcSimulator);
             
             String endpoint = pythonApiBaseUrl + "/api/optimize/hybrid";

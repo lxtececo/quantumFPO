@@ -36,8 +36,8 @@ htmlcov/
 .pytest_cache/
 
 # VSCode
-.vscode/
-!.vscode/extensions.json
+#.vscode/
+#!.vscode/extensions.json
 
 # OS/Editor
 .idea/

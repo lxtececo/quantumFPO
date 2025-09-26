@@ -1,0 +1,26 @@
+{
+    "java.compile.nullAnalysis.mode": "automatic",
+    "chat.agent.maxRequests": 50,
+    "java.configuration.updateBuildConfiguration": "automatic",
+    "python.testing.pytestArgs": [
+        "backend/src/test/python",
+        "-v"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true,
+    "python.defaultInterpreterPath": "./.venv/Scripts/python.exe",
+    "python.pythonPath": "./.venv/Scripts/python.exe",
+    "python.terminal.activateEnvironment": true,
+    "python.analysis.extraPaths": [
+        "./backend/src/main/python"
+    ],
+    "python.envFile": "${workspaceFolder}/.env",
+    "jest.jestCommandLine": "npm test --",
+    "jest.rootPath": "frontend",
+    "jest.runMode": {
+        "type": "on-demand"
+    },
+    "files.associations": {
+        "*.py": "python"
+    }
+}
