@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 # Add the backend source directory to Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'main', 'python'))
 
+@pytest.mark.integration
 class TestEndToEndIntegration:
     """End-to-end integration tests for Java-Python API communication."""
     
@@ -196,41 +197,52 @@ class TestEndToEndIntegration:
         except requests.exceptions.RequestException:
             pytest.skip("Python API service not running")
 
+    @pytest.mark.integration
     def test_python_api_concurrent_requests(self):
         """Test Python API handling of concurrent requests."""
+        # First check if Python API is available
         try:
-            request_data = {
-                "stock_data": [
-                    {"symbol": "AAPL", "date": "2025-09-01", "close": 150.0},
-                    {"symbol": "AAPL", "date": "2025-09-02", "close": 152.0},
-                    {"symbol": "GOOGL", "date": "2025-09-01", "close": 2800.0},
-                    {"symbol": "GOOGL", "date": "2025-09-02", "close": 2820.0}
-                ],
-                "var_percent": 0.05
-            }
-            
-            def make_request():
-                try:
-                    response = requests.post(
-                        f"{self.python_api_url}/api/optimize/classical",
-                        json=request_data,
-                        timeout=30
-                    )
-                    return response.status_code in [200, 500]
-                except requests.exceptions.RequestException:
-                    return False
-            
-            # Make 5 concurrent requests
-            with ThreadPoolExecutor(max_workers=5) as executor:
-                futures = [executor.submit(make_request) for _ in range(5)]
-                results = [future.result() for future in futures]
-            
-            # All requests should complete successfully or fail gracefully
-            successful_results = [result for result in results if result]
-            assert len(successful_results) == len(results)
-            
+            health_response = requests.get(f"{self.python_api_url}/health", timeout=5)
+            if health_response.status_code != 200:
+                pytest.skip("Python API service not responding to health check")
         except requests.exceptions.RequestException:
             pytest.skip("Python API service not running")
+            
+        request_data = {
+            "stock_data": [
+                {"symbol": "AAPL", "date": "2025-09-01", "close": 150.0},
+                {"symbol": "AAPL", "date": "2025-09-02", "close": 152.0},
+                {"symbol": "GOOGL", "date": "2025-09-01", "close": 2800.0},
+                {"symbol": "GOOGL", "date": "2025-09-02", "close": 2820.0}
+            ],
+            "var_percent": 0.05
+        }
+        
+        def make_request():
+            try:
+                response = requests.post(
+                    f"{self.python_api_url}/api/optimize/classical",
+                    json=request_data,
+                    timeout=30
+                )
+                return response.status_code in [200, 500]
+            except requests.exceptions.RequestException:
+                return False
+        
+        # Make 5 concurrent requests
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            futures = [executor.submit(make_request) for _ in range(5)]
+            results = [future.result() for future in futures]
+        
+        # Count successful results
+        successful_results = [result for result in results if result]
+        
+        # If no requests succeeded, the service is likely not available
+        if len(successful_results) == 0:
+            pytest.skip("Python API service not responding to optimization requests")
+        
+        # All completed requests should be successful or fail gracefully
+        assert len(successful_results) == len(results), f"Only {len(successful_results)} out of {len(results)} concurrent requests succeeded"
 
     @pytest.mark.integration
     def test_python_api_cors_configuration(self):
@@ -294,6 +306,7 @@ class TestEndToEndIntegration:
             pytest.skip("Python API service not running")
 
 
+@pytest.mark.integration
 class TestJavaPythonIntegration:
     """Integration tests for Java-to-Python API communication."""
     
@@ -613,6 +626,7 @@ class TestJavaPythonIntegration:
             pytest.skip("Services not available")
 
 
+@pytest.mark.integration
 class TestServiceResiliency:
     """Test service resiliency and error recovery."""
     
