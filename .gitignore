@@ -34,6 +34,7 @@ backend/src/main/python/qc_setup.py
 coverage.xml
 htmlcov/
 .pytest_cache/
+backend/src/test/python/.coverage
 
 # VSCode
 #.vscode/
