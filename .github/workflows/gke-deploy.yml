@@ -18,6 +18,7 @@ env:
   DEPLOYMENT_NAME: quantumfpo
   REGISTRY: ghcr.io
   IMAGE_NAME: lxtececo/quantumfpo
+  USE_GKE_GCLOUD_AUTH_PLUGIN: True
 
 jobs:
   deploy:
@@ -41,6 +42,10 @@ jobs:
       uses: google-github-actions/setup-gcloud@v2
       with:
         project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+    - name: Install GKE gcloud auth plugin
+      run: |
+        gcloud components install gke-gcloud-auth-plugin
 
     - name: Configure Docker for GCR
       run: |
@@ -130,6 +135,10 @@ jobs:
       uses: google-github-actions/setup-gcloud@v2
       with:
         project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+    - name: Install GKE gcloud auth plugin
+      run: |
+        gcloud components install gke-gcloud-auth-plugin
 
     - name: Get GKE credentials
       run: |
