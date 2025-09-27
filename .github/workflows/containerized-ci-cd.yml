@@ -31,7 +31,7 @@ jobs:
           - service: frontend
             dockerfile: ./frontend/Dockerfile
             context: ./frontend
-            port: 3000
+            port: 80
           - service: java-backend
             dockerfile: ./backend/Dockerfile
             context: ./backend
@@ -99,7 +99,7 @@ jobs:
           frontend)
             cd frontend
             npm ci
-            npm run lint || true
+            npm run lint
             npm run test:coverage
             ;;
           java-backend)
@@ -140,19 +140,46 @@ jobs:
           -p ${{ matrix.port }}:${{ matrix.port }} \
           "${IMAGE_REF}"
         
-        # Wait for container to be ready  
-        sleep 30
+        # Wait for container to be ready with retry logic
+        echo "Waiting for container to be ready..."
+        for i in {1..60}; do
+          if docker ps | grep -q "test-${{ matrix.service }}"; then
+            echo "Container is running, testing health endpoint..."
+            case "${{ matrix.service }}" in
+              frontend)
+                if curl -f -s http://localhost:${{ matrix.port }}/health; then
+                  echo "Frontend health check passed"
+                  break
+                fi
+                ;;
+              java-backend)
+                if curl -f -s http://localhost:${{ matrix.port }}/actuator/health; then
+                  echo "Java backend health check passed"
+                  break
+                fi
+                ;;
+              python-backend)
+                if curl -f -s http://localhost:${{ matrix.port }}/health; then
+                  echo "Python backend health check passed"
+                  break
+                fi
+                ;;
+            esac
+          fi
+          echo "Attempt $i/60: Container not ready yet, waiting..."
+          sleep 2
+        done
         
-        # Test health endpoint
+        # Final health check
         case "${{ matrix.service }}" in
           frontend)
-            curl -f http://localhost:${{ matrix.port }}/health || exit 1
+            curl -f http://localhost:${{ matrix.port }}/health || (echo "Frontend health check failed" && docker logs test-${{ matrix.service }} && exit 1)
             ;;
           java-backend)
-            curl -f http://localhost:${{ matrix.port }}/actuator/health || exit 1
+            curl -f http://localhost:${{ matrix.port }}/actuator/health || (echo "Java backend health check failed" && docker logs test-${{ matrix.service }} && exit 1)
             ;;
           python-backend)
-            curl -f http://localhost:${{ matrix.port }}/health || exit 1
+            curl -f http://localhost:${{ matrix.port }}/health || (echo "Python backend health check failed" && docker logs test-${{ matrix.service }} && exit 1)
             ;;
         esac
         
