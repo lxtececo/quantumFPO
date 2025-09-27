@@ -10,9 +10,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 # Install system dependencies and create user in single layer
 RUN apt-get update && apt-get install -y \
+    build-essential \
+    cmake \
     curl \
     g++ \
     gcc \
+    git \
     && rm -rf /var/lib/apt/lists/* \
     && adduser --disabled-password --gecos '' python
 
@@ -21,9 +24,15 @@ WORKDIR /app
 
 # Copy requirements first (for better layer caching)
 COPY backend/src/main/python/requirements.txt ./
+COPY backend/src/main/python/requirements-base.txt ./
+COPY backend/src/main/python/requirements-compile.txt ./
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Install Python dependencies in stages for better ARM64 compatibility
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
+    echo "Installing base dependencies (usually have precompiled wheels)..." && \
+    pip install --no-cache-dir -r requirements-base.txt && \
+    echo "Installing compilation-required dependencies..." && \
+    pip install --no-cache-dir -r requirements-compile.txt
 
 # Copy application code
 COPY backend/src/main/python/ ./
