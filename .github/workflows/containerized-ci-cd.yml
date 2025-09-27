@@ -188,13 +188,26 @@ jobs:
         docker rm test-${{ matrix.service }}
 
     - name: Build and push multi-platform image
-      if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+      if: github.ref == 'refs/heads/main'
       uses: docker/build-push-action@v5
       with:
         context: ${{ matrix.context }}
         file: ${{ matrix.dockerfile }}
         push: true
         tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        platforms: linux/amd64
+
+    # For PRs and other branches, push with a temporary tag for integration testing
+    - name: Push image for integration testing
+      if: github.ref != 'refs/heads/main'
+      uses: docker/build-push-action@v5
+      with:
+        context: ${{ matrix.context }}
+        file: ${{ matrix.dockerfile }}
+        push: true
+        tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-${{ matrix.service }}:${{ github.sha }}
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=gha
         platforms: linux/amd64
@@ -226,32 +239,23 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Update docker-compose with built images
-      run: |
-        # Replace image references in docker-compose.yml
-        sed -i "s|build:|image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend:${{ github.sha }}|g" docker-compose.yml
-        sed -i "s|context: ./frontend||g" docker-compose.yml
-        sed -i "s|dockerfile: Dockerfile||g" docker-compose.yml
-        
-        sed -i "s|build:|image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-java-backend:${{ github.sha }}|g" docker-compose.yml
-        sed -i "s|context: ./backend||g" docker-compose.yml
-        
-        sed -i "s|build:|image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-python-backend:${{ github.sha }}|g" docker-compose.yml
-        sed -i "s|context: \.||g" docker-compose.yml
-
     - name: Start services with Docker Compose
       run: |
-        docker compose up -d
+        # Use CI-specific compose file with pre-built images
+        FRONTEND_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend:${{ github.sha }}" \
+        JAVA_BACKEND_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-java-backend:${{ github.sha }}" \
+        PYTHON_BACKEND_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-python-backend:${{ github.sha }}" \
+        docker compose -f docker-compose.ci.yml up -d
         
         # Wait for services to be ready
         echo "Waiting for services to start..."
         sleep 60
         
         # Check service health
-        docker compose ps
+        docker compose -f docker-compose.ci.yml ps
         
         # Wait for all services to be healthy
-        timeout 120 bash -c 'until [ "$(docker compose ps --filter health=healthy --quiet | wc -l)" -eq "3" ]; do sleep 5; done'
+        timeout 120 bash -c 'until [ "$(docker compose -f docker-compose.ci.yml ps --filter health=healthy --quiet | wc -l)" -eq "3" ]; do sleep 5; done'
 
     - name: Run integration tests
       run: |
@@ -272,14 +276,14 @@ jobs:
       if: always()
       run: |
         mkdir -p logs
-        docker compose logs frontend > logs/frontend.log
-        docker compose logs java-backend > logs/java-backend.log  
-        docker compose logs python-backend > logs/python-backend.log
+        docker compose -f docker-compose.ci.yml logs frontend > logs/frontend.log
+        docker compose -f docker-compose.ci.yml logs java-backend > logs/java-backend.log  
+        docker compose -f docker-compose.ci.yml logs python-backend > logs/python-backend.log
 
     - name: Cleanup
       if: always()
       run: |
-        docker compose down -v
+        docker compose -f docker-compose.ci.yml down -v
         docker system prune -f
 
     - name: Upload service logs

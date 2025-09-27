@@ -1,0 +1,69 @@
+# Docker Compose configuration for CI/CD integration testing
+# Uses pre-built images from container registry instead of building locally
+# Environment variables:
+# - FRONTEND_IMAGE: Frontend Docker image with tag
+# - JAVA_BACKEND_IMAGE: Java backend Docker image with tag  
+# - PYTHON_BACKEND_IMAGE: Python backend Docker image with tag
+
+services:
+  frontend:
+    image: ${FRONTEND_IMAGE}
+    container_name: quantumfpo-frontend
+    ports:
+      - "3000:80"
+    environment:
+      - NODE_ENV=production
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    depends_on:
+      - java-backend
+    networks:
+      - quantumfpo-network
+
+  java-backend:
+    image: ${JAVA_BACKEND_IMAGE}
+    container_name: quantumfpo-java-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - JAVA_OPTS=-Xmx512m -Xms256m
+      - PYTHON_API_BASE_URL=http://python-backend:8002
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+    depends_on:
+      - python-backend
+    networks:
+      - quantumfpo-network
+
+  python-backend:
+    image: ${PYTHON_BACKEND_IMAGE}
+    container_name: quantumfpo-python-backend
+    ports:
+      - "8002:8002"
+    environment:
+      - ENVIRONMENT=docker
+      - PYTHONPATH=/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - quantumfpo-network
+
+networks:
+  quantumfpo-network:
+    driver: bridge
