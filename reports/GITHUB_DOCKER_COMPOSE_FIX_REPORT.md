@@ -2,15 +2,32 @@
 
 ## Problem Identified
 
-The GitHub Actions workflow was failing with the error:
+The GitHub Actions workflow was failing with multiple errors:
+
+1. **Docker Compose YAML Error**:
 ```
 yaml: line 52: mapping values are not allowed in this context
 ```
 
+2. **Image Availability Error**:
+```
+manifest unknown: unable to find the specified image "ghcr.io/lxtececo/quantumfpo-java-backend:..."
+```
+
 ## Root Cause Analysis
 
-The issue was in the `integration-tests` job where the workflow attempted to modify the main `docker-compose.yml` file using `sed` commands to replace build configurations with pre-built image references. These modifications were:
+### Original YAML Issue
+The workflow was using destructive `sed` commands to modify `docker-compose.yml`, causing YAML parsing errors.
 
+### Image Availability Issue
+The images needed for integration testing weren't being pushed to the registry with the correct tags that the downstream jobs expected.
+
+### Image Availability Issue
+1. **Inconsistent Push Strategy**: Images were only being pushed with complex metadata tags for main branch, not the SHA-based tags needed by integration tests
+2. **Timing Issues**: Integration tests and security scans started before images were fully available in registry
+3. **Tag Mismatch**: Different jobs expected different tag formats
+
+### Original YAML Issue (Fixed Previously)  
 1. **Destructive**: Used global replacement (`g` flag) causing multiple unintended substitutions
 2. **Incomplete**: Left orphaned YAML keys like `context:` and `dockerfile:` 
 3. **Invalid YAML**: Created malformed YAML structure leading to parsing errors
@@ -18,13 +35,18 @@ The issue was in the `integration-tests` job where the workflow attempted to mod
 ### Problematic Code
 ```bash
 sed -i "s|build:|image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend:${{ github.sha }}|g" docker-compose.yml
-sed -i "s|context: ./frontend||g" docker-compose.yml
-sed -i "s|dockerfile: Dockerfile||g" docker-compose.yml
 ```
 
 ## Solution Implementation
 
-### 1. Created Dedicated CI Compose File
+### 1. Fixed Image Availability Strategy
+**Before**: Complex conditional logic with different tags for different branches
+**After**: 
+- **All branches**: Always push SHA-based tags needed for integration testing
+- **Main branch**: Additional metadata tags for production use
+- **Verification**: Added pre-flight checks to ensure images exist before using them
+
+### 2. Created Dedicated CI Compose File (Previous Fix)
 - **File**: `docker-compose.ci.yml`
 - **Purpose**: Clean configuration using pre-built images via environment variables
 - **Benefits**: 
@@ -32,18 +54,12 @@ sed -i "s|dockerfile: Dockerfile||g" docker-compose.yml
   - Cleaner separation between local dev and CI environments
   - Maintainable and version-controlled
 
-### 2. Updated GitHub Actions Workflow
-**Changes Made:**
-- Replaced `sed` command approach with environment variable substitution
-- Uses `docker-compose.ci.yml` for integration testing
-- Added image pushing for non-main branches to support PR testing
-- Updated all compose commands to use the CI-specific file
-
-### 3. Enhanced Image Availability Strategy
-**Before:** Images only pushed for main branch (causing PR failures)
-**After:** 
-- Main branch: Push with proper tags for production
-- Other branches/PRs: Push with SHA tags for integration testing
+### 3. Enhanced Workflow Reliability
+**New Additions:**
+- Pre-flight image verification in integration tests and security scans
+- Consistent SHA-based tagging across all jobs
+- Simplified local testing with dedicated test tags
+- Better error handling and debugging information
 
 ## Key Improvements
 

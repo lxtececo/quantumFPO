@@ -123,16 +123,15 @@ jobs:
         file: ${{ matrix.dockerfile }}
         push: false
         load: true
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
+        tags: test-${{ matrix.service }}:latest
         cache-from: type=gha
         cache-to: type=gha,mode=max
         platforms: linux/amd64
 
     - name: Test Docker image
       run: |
-        # Use the first tag from metadata output (this matches what was built)
-        IMAGE_REF=$(echo '${{ steps.meta.outputs.tags }}' | head -n1)
+        # Use simple test tag
+        IMAGE_REF="test-${{ matrix.service }}:latest"
         echo "Testing image: ${IMAGE_REF}"
         
         # Run container in background
@@ -187,7 +186,21 @@ jobs:
         docker stop test-${{ matrix.service }}
         docker rm test-${{ matrix.service }}
 
-    - name: Build and push multi-platform image
+    - name: Build and push image for integration testing
+      uses: docker/build-push-action@v5
+      with:
+        context: ${{ matrix.context }}
+        file: ${{ matrix.dockerfile }}
+        push: true
+        tags: |
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-${{ matrix.service }}:${{ github.sha }}
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-${{ matrix.service }}:latest
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        platforms: linux/amd64
+
+    # Additional tags for main branch
+    - name: Build and push additional tags for main branch
       if: github.ref == 'refs/heads/main'
       uses: docker/build-push-action@v5
       with:
@@ -195,19 +208,6 @@ jobs:
         file: ${{ matrix.dockerfile }}
         push: true
         tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
-        cache-from: type=gha
-        platforms: linux/amd64
-
-    # For PRs and other branches, push with a temporary tag for integration testing
-    - name: Push image for integration testing
-      if: github.ref != 'refs/heads/main'
-      uses: docker/build-push-action@v5
-      with:
-        context: ${{ matrix.context }}
-        file: ${{ matrix.dockerfile }}
-        push: true
-        tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-${{ matrix.service }}:${{ github.sha }}
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=gha
         platforms: linux/amd64
@@ -238,6 +238,14 @@ jobs:
         registry: ${{ env.REGISTRY }}
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Verify images are available
+      run: |
+        echo "Checking if images are available in registry..."
+        docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend:${{ github.sha }}
+        docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-java-backend:${{ github.sha }}
+        docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-python-backend:${{ github.sha }}
+        echo "All images successfully pulled from registry"
 
     - name: Start services with Docker Compose
       run: |
@@ -303,6 +311,19 @@ jobs:
         service: [frontend, java-backend, python-backend]
 
     steps:
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Verify image is available
+      run: |
+        echo "Checking if image is available in registry..."
+        docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-${{ matrix.service }}:${{ github.sha }}
+        echo "Image successfully pulled from registry"
+
     - name: Run Trivy vulnerability scanner
       uses: aquasecurity/trivy-action@master
       with:
