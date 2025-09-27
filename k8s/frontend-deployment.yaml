@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quantumfpo-frontend
+  namespace: quantumfpo
+  labels:
+    app: quantumfpo-frontend
+    version: v0.0.1-alpha
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: quantumfpo-frontend
+  template:
+    metadata:
+      labels:
+        app: quantumfpo-frontend
+        version: v0.0.1-alpha
+    spec:
+      containers:
+      - name: frontend
+        image: FRONTEND_IMAGE
+        ports:
+        - containerPort: 80
+        env:
+        - name: NODE_ENV
+          valueFrom:
+            configMapKeyRef:
+              name: quantumfpo-config
+              key: NODE_ENV
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 101  # nginx user
+          readOnlyRootFilesystem: false
+          allowPrivilegeEscalation: false
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: quantumfpo-frontend
+  namespace: quantumfpo
+  labels:
+    app: quantumfpo-frontend
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+    name: http
+  selector:
+    app: quantumfpo-frontend
+---

@@ -1,0 +1,48 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: quantumfpo-ingress
+  namespace: quantumfpo
+  labels:
+    app: quantumfpo
+  annotations:
+    kubernetes.io/ingress.class: "gce"
+    kubernetes.io/ingress.global-static-ip-name: "quantumfpo-ip"
+    networking.gke.io/managed-certificates: "quantumfpo-ssl-cert"
+    kubernetes.io/ingress.allow-http: "true"
+spec:
+  rules:
+  - host: quantumfpo.example.com  # Replace with your actual domain
+    http:
+      paths:
+      - path: /api/java/*
+        pathType: Prefix
+        backend:
+          service:
+            name: quantumfpo-java-backend
+            port:
+              number: 8080
+      - path: /api/python/*
+        pathType: Prefix
+        backend:
+          service:
+            name: quantumfpo-python-backend
+            port:
+              number: 8002
+      - path: /*
+        pathType: Prefix
+        backend:
+          service:
+            name: quantumfpo-frontend
+            port:
+              number: 80
+---
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: quantumfpo-ssl-cert
+  namespace: quantumfpo
+spec:
+  domains:
+    - quantumfpo.example.com  # Replace with your actual domain
+---

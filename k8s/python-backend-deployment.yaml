@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quantumfpo-python-backend
+  namespace: quantumfpo
+  labels:
+    app: quantumfpo-python-backend
+    version: v0.0.1-alpha
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: quantumfpo-python-backend
+  template:
+    metadata:
+      labels:
+        app: quantumfpo-python-backend
+        version: v0.0.1-alpha
+    spec:
+      containers:
+      - name: python-backend
+        image: PYTHON_BACKEND_IMAGE
+        ports:
+        - containerPort: 8002
+        env:
+        - name: ENVIRONMENT
+          valueFrom:
+            configMapKeyRef:
+              name: quantumfpo-config
+              key: ENVIRONMENT
+        - name: PYTHONPATH
+          valueFrom:
+            configMapKeyRef:
+              name: quantumfpo-config
+              key: PYTHONPATH
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8002
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8002
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          readOnlyRootFilesystem: false
+          allowPrivilegeEscalation: false
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: quantumfpo-python-backend
+  namespace: quantumfpo
+  labels:
+    app: quantumfpo-python-backend
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8002
+    targetPort: 8002
+    protocol: TCP
+    name: http
+  selector:
+    app: quantumfpo-python-backend
+---

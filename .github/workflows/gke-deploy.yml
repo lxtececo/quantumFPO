@@ -1,0 +1,147 @@
+name: Deploy to GKE
+
+on:
+  workflow_run:
+    workflows: ["Containerized CI/CD Pipeline"]
+    types:
+      - completed
+    branches: [ main ]
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GKE_CLUSTER: ${{ secrets.GKE_CLUSTER_NAME }}
+  GKE_ZONE: ${{ secrets.GKE_CLUSTER_ZONE }}
+  DEPLOYMENT_NAME: quantumfpo
+  REGISTRY: ghcr.io
+  IMAGE_NAME: lxtececo/quantumfpo
+
+jobs:
+  deploy:
+    name: Deploy to GKE
+    runs-on: ubuntu-latest
+    # Only run if the triggering workflow succeeded and on main branch
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' }}
+    
+    environment: production
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+      with:
+        project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+    - name: Configure Docker for GCR
+      run: |
+        gcloud auth configure-docker
+
+    - name: Get GKE credentials
+      run: |
+        gcloud container clusters get-credentials "$GKE_CLUSTER" --zone "$GKE_ZONE"
+
+    - name: Verify cluster connection
+      run: |
+        kubectl cluster-info
+        kubectl get nodes
+
+    - name: Set image tag from triggering workflow
+      run: |
+        echo "IMAGE_TAG=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_ENV
+        echo "Deploying images with tag: ${{ github.event.workflow_run.head_sha }}"
+
+    - name: Deploy to GKE
+      run: |
+        # Replace image tags in Kubernetes manifests
+        sed -i "s|FRONTEND_IMAGE|$REGISTRY/$IMAGE_NAME-frontend:$IMAGE_TAG|g" k8s/frontend-deployment.yaml
+        sed -i "s|JAVA_BACKEND_IMAGE|$REGISTRY/$IMAGE_NAME-java-backend:$IMAGE_TAG|g" k8s/java-backend-deployment.yaml
+        sed -i "s|PYTHON_BACKEND_IMAGE|$REGISTRY/$IMAGE_NAME-python-backend:$IMAGE_TAG|g" k8s/python-backend-deployment.yaml
+        
+        # Apply Kubernetes manifests
+        kubectl apply -f k8s/
+
+    - name: Verify deployment
+      run: |
+        # Wait for deployments to be ready
+        kubectl rollout status deployment/quantumfpo-frontend
+        kubectl rollout status deployment/quantumfpo-java-backend
+        kubectl rollout status deployment/quantumfpo-python-backend
+        
+        # Get deployment status
+        kubectl get deployments
+        kubectl get services
+        kubectl get ingress
+
+    - name: Run smoke tests
+      run: |
+        # Get the external IP or LoadBalancer IP
+        FRONTEND_IP=$(kubectl get service quantumfpo-frontend -o jsonpath='{.status.loadBalancer.ingress[0].ip}' || echo "")
+        JAVA_IP=$(kubectl get service quantumfpo-java-backend -o jsonpath='{.status.loadBalancer.ingress[0].ip}' || echo "")
+        PYTHON_IP=$(kubectl get service quantumfpo-python-backend -o jsonpath='{.status.loadBalancer.ingress[0].ip}' || echo "")
+        
+        if [ -n "$FRONTEND_IP" ]; then
+          echo "Testing frontend at $FRONTEND_IP"
+          curl -f http://$FRONTEND_IP/health || echo "Frontend health check failed"
+        fi
+        
+        if [ -n "$JAVA_IP" ]; then
+          echo "Testing Java backend at $JAVA_IP"
+          curl -f http://$JAVA_IP:8080/actuator/health || echo "Java backend health check failed"
+        fi
+        
+        if [ -n "$PYTHON_IP" ]; then
+          echo "Testing Python backend at $PYTHON_IP"
+          curl -f http://$PYTHON_IP:8002/health || echo "Python backend health check failed"
+        fi
+
+    - name: Notify deployment status
+      if: always()
+      run: |
+        if [ ${{ job.status }} == 'success' ]; then
+          echo "🚀 Deployment to GKE successful!"
+          echo "Application is now running on GKE cluster: $GKE_CLUSTER"
+        else
+          echo "❌ Deployment to GKE failed!"
+        fi
+
+  rollback:
+    name: Rollback on Failure
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: failure()
+    
+    steps:
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+      with:
+        project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+    - name: Get GKE credentials
+      run: |
+        gcloud container clusters get-credentials "$GKE_CLUSTER" --zone "$GKE_ZONE"
+
+    - name: Rollback deployments
+      run: |
+        echo "Rolling back failed deployment..."
+        kubectl rollout undo deployment/quantumfpo-frontend || true
+        kubectl rollout undo deployment/quantumfpo-java-backend || true
+        kubectl rollout undo deployment/quantumfpo-python-backend || true
+        
+        echo "Rollback initiated. Checking status..."
+        kubectl get deployments
+        kubectl describe deployments

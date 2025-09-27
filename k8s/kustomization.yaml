@@ -1,0 +1,64 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: quantumfpo
+  annotations:
+    app.kubernetes.io/name: quantumfpo
+    app.kubernetes.io/version: v0.0.1-alpha
+
+# Namespace for all resources
+namespace: quantumfpo
+
+# Common labels applied to all resources
+commonLabels:
+  app.kubernetes.io/name: quantumfpo
+  app.kubernetes.io/version: v0.0.1-alpha
+  app.kubernetes.io/managed-by: github-actions
+
+# Resources to include in the deployment
+resources:
+  - 00-namespace-config.yaml
+  - python-backend-deployment.yaml
+  - java-backend-deployment.yaml  
+  - frontend-deployment.yaml
+  - ingress.yaml
+  - hpa.yaml
+
+# Image transformations (these will be replaced by GitHub Actions)
+images:
+  - name: FRONTEND_IMAGE
+    newName: ghcr.io/lxtececo/quantumfpo-frontend
+    newTag: latest
+  - name: JAVA_BACKEND_IMAGE  
+    newName: ghcr.io/lxtececo/quantumfpo-java-backend
+    newTag: latest
+  - name: PYTHON_BACKEND_IMAGE
+    newName: ghcr.io/lxtececo/quantumfpo-python-backend
+    newTag: latest
+
+# Configuration patches
+patchesStrategicMerge:
+  - |-
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: quantumfpo-config
+    data:
+      # Production-specific overrides can be added here
+      LOG_LEVEL: "INFO"
+      
+# Resource name prefix (optional)
+# namePrefix: prod-
+
+# Resource name suffix (optional)  
+# nameSuffix: -v1
+
+# Replicas override for production
+replicas:
+  - name: quantumfpo-frontend
+    count: 3
+  - name: quantumfpo-java-backend
+    count: 2  
+  - name: quantumfpo-python-backend
+    count: 2
