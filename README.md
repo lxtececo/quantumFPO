@@ -1,10 +1,14 @@
 
 # Quantum Financial Portfolio Optimization (quantumFPO)
 
+[![Version](https://img.shields.io/badge/version-v0.0.1--alpha-blue)](https://github.com/lxtececo/quantumFPO/releases/tag/v0.0.1-alpha)
+[![License](https://img.shields.io/badge/license-MIT-green)](#)
 [![Containerized CI/CD](https://github.com/lxtececo/quantumFPO/actions/workflows/containerized-ci-cd.yml/badge.svg)](https://github.com/lxtececo/quantumFPO/actions/workflows/containerized-ci-cd.yml)
 [![Java CI](https://github.com/lxtececo/quantumFPO/actions/workflows/maven.yml/badge.svg)](https://github.com/lxtececo/quantumFPO/actions/workflows/maven.yml)
 [![Node.js CI](https://github.com/lxtececo/quantumFPO/actions/workflows/node.js.yml/badge.svg)](https://github.com/lxtececo/quantumFPO/actions/workflows/node.js.yml)
 [![Python Tests](https://github.com/lxtececo/quantumFPO/actions/workflows/python-tests.yml/badge.svg)](https://github.com/lxtececo/quantumFPO/actions/workflows/python-tests.yml)
+
+> **🚀 v0.0.1-alpha Released!** - Complete quantum-inspired portfolio optimization platform with microservices architecture. [View Release →](https://github.com/lxtececo/quantumFPO/releases/tag/v0.0.1-alpha)
 
 ## Project Overview
 This project is a full-stack application for quantum-inspired financial portfolio optimization. It features a fast JavaScript frontend (React + Vite), a Spring Boot backend for RESTful services, and a Python microservice for advanced portfolio optimization using PyPortfolioOpt.
