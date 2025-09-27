@@ -248,18 +248,19 @@ jobs:
         echo "All images successfully pulled from registry"
 
     - name: Start services with Docker Compose
+      env:
+        FRONTEND_IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend:${{ github.sha }}
+        JAVA_BACKEND_IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-java-backend:${{ github.sha }}
+        PYTHON_BACKEND_IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-python-backend:${{ github.sha }}
       run: |
         # Use CI-specific compose file with pre-built images
-        FRONTEND_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend:${{ github.sha }}" \
-        JAVA_BACKEND_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-java-backend:${{ github.sha }}" \
-        PYTHON_BACKEND_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-python-backend:${{ github.sha }}" \
         docker compose -f docker-compose.ci.yml up -d
         
         # Wait for services to be ready
         echo "Waiting for services to start..."
         sleep 60
         
-        # Check service health
+        # Check service health  
         docker compose -f docker-compose.ci.yml ps
         
         # Wait for all services to be healthy
@@ -282,6 +283,10 @@ jobs:
 
     - name: Collect service logs
       if: always()
+      env:
+        FRONTEND_IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend:${{ github.sha }}
+        JAVA_BACKEND_IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-java-backend:${{ github.sha }}
+        PYTHON_BACKEND_IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-python-backend:${{ github.sha }}
       run: |
         mkdir -p logs
         docker compose -f docker-compose.ci.yml logs frontend > logs/frontend.log
@@ -290,6 +295,10 @@ jobs:
 
     - name: Cleanup
       if: always()
+      env:
+        FRONTEND_IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend:${{ github.sha }}
+        JAVA_BACKEND_IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-java-backend:${{ github.sha }}
+        PYTHON_BACKEND_IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-python-backend:${{ github.sha }}
       run: |
         docker compose -f docker-compose.ci.yml down -v
         docker system prune -f
