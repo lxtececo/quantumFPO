@@ -1,40 +1,13 @@
-apiVersion: v1
-kind: ServiceMonitor
-metadata:
-  name: quantumfpo-monitoring
-  namespace: quantumfpo
-  labels:
-    app: quantumfpo
-spec:
-  selector:
-    matchLabels:
-      app: quantumfpo-java-backend
-  endpoints:
-  - port: http
-    path: /actuator/prometheus
-    interval: 30s
----
-apiVersion: v1
-kind: ServiceMonitor  
-metadata:
-  name: quantumfpo-python-monitoring
-  namespace: quantumfpo
-  labels:
-    app: quantumfpo
-spec:
-  selector:
-    matchLabels:
-      app: quantumfpo-python-backend
-  endpoints:
-  - port: http
-    path: /metrics
-    interval: 30s
----
+# Basic monitoring setup without requiring Prometheus Operator CRDs
+# This file contains standard Kubernetes resources for monitoring and networking
+
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: quantumfpo-network-policy
   namespace: quantumfpo
+  labels:
+    app: quantumfpo
 spec:
   podSelector:
     matchLabels:
@@ -59,4 +32,29 @@ spec:
       port: 80
   egress:
   - {}  # Allow all egress traffic
+---
+# ConfigMap for monitoring configuration (can be used by monitoring tools)
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: quantumfpo-monitoring-config
+  namespace: quantumfpo
+  labels:
+    app: quantumfpo
+data:
+  # Monitoring endpoints configuration
+  endpoints.yaml: |
+    endpoints:
+      - name: java-backend
+        url: http://quantumfpo-java-backend:8080/actuator/health
+        interval: 30s
+      - name: java-backend-metrics
+        url: http://quantumfpo-java-backend:8080/actuator/prometheus
+        interval: 30s
+      - name: python-backend
+        url: http://quantumfpo-python-backend:8002/health
+        interval: 30s
+      - name: frontend
+        url: http://quantumfpo-frontend:80/health
+        interval: 30s
 ---

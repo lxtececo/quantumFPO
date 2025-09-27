@@ -72,42 +72,89 @@ jobs:
         sed -i "s|JAVA_BACKEND_IMAGE|$REGISTRY/$IMAGE_NAME-java-backend:$IMAGE_TAG|g" k8s/java-backend-deployment.yaml
         sed -i "s|PYTHON_BACKEND_IMAGE|$REGISTRY/$IMAGE_NAME-python-backend:$IMAGE_TAG|g" k8s/python-backend-deployment.yaml
         
-        # Apply Kubernetes manifests
-        kubectl apply -f k8s/
+        # Apply Kubernetes manifests (exclude files that require additional CRDs)
+        kubectl apply -f k8s/00-namespace-config.yaml
+        kubectl apply -f k8s/python-backend-deployment.yaml
+        kubectl apply -f k8s/java-backend-deployment.yaml
+        kubectl apply -f k8s/frontend-deployment.yaml
+        kubectl apply -f k8s/hpa.yaml
+        kubectl apply -f k8s/monitoring.yaml
+        kubectl apply -f k8s/ingress.yaml
+        
+        echo "All Kubernetes manifests applied successfully"
 
     - name: Verify deployment
       run: |
-        # Wait for deployments to be ready
-        kubectl rollout status deployment/quantumfpo-frontend
-        kubectl rollout status deployment/quantumfpo-java-backend
-        kubectl rollout status deployment/quantumfpo-python-backend
+        # Wait for deployments to be ready with timeout
+        echo "Waiting for Python backend deployment..."
+        kubectl rollout status deployment/quantumfpo-python-backend --timeout=300s
+        
+        echo "Waiting for Java backend deployment..."
+        kubectl rollout status deployment/quantumfpo-java-backend --timeout=300s
+        
+        echo "Waiting for Frontend deployment..."
+        kubectl rollout status deployment/quantumfpo-frontend --timeout=300s
         
         # Get deployment status
-        kubectl get deployments
-        kubectl get services
-        kubectl get ingress
+        echo "=== Deployment Status ==="
+        kubectl get deployments -n quantumfpo
+        
+        echo "=== Service Status ==="
+        kubectl get services -n quantumfpo
+        
+        echo "=== Pod Status ==="
+        kubectl get pods -n quantumfpo
+        
+        echo "=== Ingress Status ==="
+        kubectl get ingress -n quantumfpo
+        
+        echo "=== HPA Status ==="
+        kubectl get hpa -n quantumfpo
 
     - name: Run smoke tests
       run: |
+        # Wait a bit for services to be ready
+        echo "Waiting for services to be ready..."
+        sleep 30
+        
         # Get the external IP or LoadBalancer IP
-        FRONTEND_IP=$(kubectl get service quantumfpo-frontend -o jsonpath='{.status.loadBalancer.ingress[0].ip}' || echo "")
-        JAVA_IP=$(kubectl get service quantumfpo-java-backend -o jsonpath='{.status.loadBalancer.ingress[0].ip}' || echo "")
-        PYTHON_IP=$(kubectl get service quantumfpo-python-backend -o jsonpath='{.status.loadBalancer.ingress[0].ip}' || echo "")
+        FRONTEND_IP=$(kubectl get service quantumfpo-frontend -n quantumfpo -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "")
+        JAVA_IP=$(kubectl get service quantumfpo-java-backend -n quantumfpo -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "")
+        PYTHON_IP=$(kubectl get service quantumfpo-python-backend -n quantumfpo -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "")
         
-        if [ -n "$FRONTEND_IP" ]; then
-          echo "Testing frontend at $FRONTEND_IP"
-          curl -f http://$FRONTEND_IP/health || echo "Frontend health check failed"
-        fi
+        echo "=== Service IPs ==="
+        echo "Frontend IP: $FRONTEND_IP"
+        echo "Java Backend IP: $JAVA_IP"  
+        echo "Python Backend IP: $PYTHON_IP"
         
-        if [ -n "$JAVA_IP" ]; then
-          echo "Testing Java backend at $JAVA_IP"
-          curl -f http://$JAVA_IP:8080/actuator/health || echo "Java backend health check failed"
-        fi
+        # Test internal cluster connectivity using port-forwarding
+        echo "=== Testing via port-forwarding ==="
         
-        if [ -n "$PYTHON_IP" ]; then
-          echo "Testing Python backend at $PYTHON_IP"
-          curl -f http://$PYTHON_IP:8002/health || echo "Python backend health check failed"
-        fi
+        # Test Python backend health
+        echo "Testing Python backend health..."
+        timeout 30 kubectl port-forward service/quantumfpo-python-backend 8002:8002 -n quantumfpo &
+        PF_PID_PYTHON=$!
+        sleep 5
+        curl -f http://localhost:8002/health || echo "Python backend health check failed"
+        kill $PF_PID_PYTHON 2>/dev/null || true
+        
+        # Test Java backend health  
+        echo "Testing Java backend health..."
+        timeout 30 kubectl port-forward service/quantumfpo-java-backend 8080:8080 -n quantumfpo &
+        PF_PID_JAVA=$!
+        sleep 5
+        curl -f http://localhost:8080/actuator/health || echo "Java backend health check failed"
+        kill $PF_PID_JAVA 2>/dev/null || true
+        
+        # Test frontend health
+        echo "Testing Frontend health..."
+        timeout 30 kubectl port-forward service/quantumfpo-frontend 8000:80 -n quantumfpo &
+        PF_PID_FRONTEND=$!
+        sleep 5
+        curl -f http://localhost:8000/health || echo "Frontend health check failed"
+        kill $PF_PID_FRONTEND 2>/dev/null || true
+        
+        echo "=== Smoke tests completed ==="
 
     - name: Notify deployment status
       if: always()
@@ -147,10 +194,10 @@ jobs:
     - name: Rollback deployments
       run: |
         echo "Rolling back failed deployment..."
-        kubectl rollout undo deployment/quantumfpo-frontend || true
-        kubectl rollout undo deployment/quantumfpo-java-backend || true
-        kubectl rollout undo deployment/quantumfpo-python-backend || true
+        kubectl rollout undo deployment/quantumfpo-frontend -n quantumfpo || true
+        kubectl rollout undo deployment/quantumfpo-java-backend -n quantumfpo || true
+        kubectl rollout undo deployment/quantumfpo-python-backend -n quantumfpo || true
         
         echo "Rollback initiated. Checking status..."
-        kubectl get deployments
-        kubectl describe deployments
+        kubectl get deployments -n quantumfpo
+        kubectl describe deployments -n quantumfpo

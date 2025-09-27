@@ -6,11 +6,11 @@ metadata:
   labels:
     app: quantumfpo
   annotations:
-    kubernetes.io/ingress.class: "gce"
     kubernetes.io/ingress.global-static-ip-name: "quantumfpo-ip"
     networking.gke.io/managed-certificates: "quantumfpo-ssl-cert"
     kubernetes.io/ingress.allow-http: "true"
 spec:
+  ingressClassName: "gce"
   rules:
   - host: quantumfpo.example.com  # Replace with your actual domain
     http:
