@@ -12,8 +12,7 @@ k8s/
 ├── frontend-deployment.yaml         # React frontend with Nginx
 ├── ingress.yaml                     # Load balancer and SSL configuration
 ├── hpa.yaml                         # Horizontal Pod Autoscaling
-├── monitoring.yaml                  # Monitoring and network policies
-├── kustomization.yaml              # Kustomize configuration
+├── monitoring.yaml                  # NetworkPolicy and monitoring config
 ├── GKE_DEPLOYMENT_SETUP.md         # Complete setup guide
 └── README.md                       # This file
 ```
@@ -141,15 +140,27 @@ metrics:
 
 ## 📈 Monitoring & Observability
 
-### Metrics Collection
-- **Java Backend**: Prometheus metrics via Spring Boot Actuator
-- **Python Backend**: Custom metrics endpoint
-- **Frontend**: Basic health checks
+### Built-in Monitoring
+- **NetworkPolicy**: Controls pod-to-pod communication for security
+- **ConfigMap**: Contains monitoring endpoints configuration  
+- **Health Checks**: Kubernetes liveness and readiness probes
+- **Resource Monitoring**: CPU and memory metrics for HPA
 
-### Logging
+### Metrics Collection
+- **Java Backend**: Prometheus metrics via Spring Boot Actuator (`/actuator/prometheus`)
+- **Python Backend**: Health endpoint (`/health`) - ready for custom metrics
+- **Frontend**: Nginx health checks
+
+### Logging  
 - All containers log to stdout/stderr
-- Logs available via `kubectl logs`
+- Logs available via `kubectl logs -f deployment/<service-name> -n quantumfpo`
 - Integration with Google Cloud Logging
+
+### Advanced Monitoring (Optional)
+For production monitoring with Prometheus and Grafana:
+1. Install Prometheus Operator: `kubectl apply -f https://github.com/prometheus-operator/prometheus-operator/releases/download/v0.68.0/bundle.yaml`
+2. Replace monitoring.yaml with ServiceMonitor resources
+3. Deploy Grafana dashboards for visualization
 
 ### Service Mesh (Optional)
 Ready for Istio service mesh integration for advanced traffic management and observability.
