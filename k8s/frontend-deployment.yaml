@@ -7,7 +7,8 @@ metadata:
     app: quantumfpo-frontend
     version: v0.0.1-alpha
 spec:
-  replicas: 3
+  replicas: 1  # Temporarily reduced from 3 to help with resource constraints
+  progressDeadlineSeconds: 600  # 10 minutes for deployment to complete
   selector:
     matchLabels:
       app: quantumfpo-frontend

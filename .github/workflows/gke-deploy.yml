@@ -65,6 +65,23 @@ jobs:
         echo "IMAGE_TAG=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_ENV
         echo "Deploying images with tag: ${{ github.event.workflow_run.head_sha }}"
 
+    - name: Check and clean problematic webhooks
+      run: |
+        echo "=== Checking for problematic webhooks ==="
+        kubectl get validatingwebhookconfigurations -o name || echo "No validating webhooks"
+        kubectl get mutatingwebhookconfigurations -o name || echo "No mutating webhooks"
+        
+        # Check for GMP operator webhooks that might be causing issues
+        if kubectl get validatingwebhookconfigurations | grep -q "gmp-operator"; then
+          echo "Found GMP operator webhook, checking if it's functional..."
+          kubectl describe validatingwebhookconfigurations | grep -A 10 -B 5 "gmp-operator" || echo "Could not describe webhook"
+        fi
+        
+        # Check cluster health
+        echo "=== Cluster Health Check ==="
+        kubectl get componentstatuses || echo "Component status not available"
+        kubectl get --raw='/readyz' || echo "Readiness check failed"
+
     - name: Deploy to GKE
       run: |
         # Replace image tags in Kubernetes manifests
@@ -97,17 +114,42 @@ jobs:
         echo "Waiting for Java backend deployment..."
         kubectl rollout status deployment/quantumfpo-java-backend -n quantumfpo --timeout=300s
         
+        echo "=== Pre-Frontend Deployment Diagnostics ==="
+        kubectl get pods -n quantumfpo -o wide
+        kubectl get events -n quantumfpo --sort-by='.lastTimestamp' | tail -20
+        
         echo "Waiting for Frontend deployment (longer timeout due to frontend complexity)..."
         if ! kubectl rollout status deployment/quantumfpo-frontend -n quantumfpo --timeout=600s; then
-          echo "Frontend deployment failed or timed out. Running diagnostics..."
+          echo "Frontend deployment failed or timed out. Running comprehensive diagnostics..."
+          
+          echo "=== Frontend Deployment Status ==="
+          kubectl describe deployment quantumfpo-frontend -n quantumfpo
+          
+          echo "=== Frontend ReplicaSet Status ==="
+          kubectl get rs -l app=quantumfpo-frontend -n quantumfpo -o wide
+          kubectl describe rs -l app=quantumfpo-frontend -n quantumfpo
+          
           echo "=== Frontend Pod Details ==="
           kubectl get pods -l app=quantumfpo-frontend -n quantumfpo -o wide
+          
           echo "=== Frontend Pod Events ==="
-          kubectl get events -n quantumfpo --field-selector involvedObject.name=$(kubectl get pods -l app=quantumfpo-frontend -n quantumfpo -o jsonpath='{.items[0].metadata.name}') --sort-by='.lastTimestamp'
+          kubectl get events -n quantumfpo --field-selector reason=Failed --sort-by='.lastTimestamp' | tail -10
+          kubectl get events -n quantumfpo --field-selector reason=FailedMount --sort-by='.lastTimestamp' | tail -10
+          kubectl get events -n quantumfpo --field-selector reason=FailedScheduling --sort-by='.lastTimestamp' | tail -10
+          
           echo "=== Frontend Pod Logs ==="
-          kubectl logs -l app=quantumfpo-frontend -n quantumfpo --tail=100
-          echo "=== Frontend Pod Description ==="
+          for pod in $(kubectl get pods -l app=quantumfpo-frontend -n quantumfpo -o jsonpath='{.items[*].metadata.name}'); do
+            echo "--- Logs for pod: $pod ---"
+            kubectl logs $pod -n quantumfpo --tail=50 || echo "Could not get logs for $pod"
+          done
+          
+          echo "=== Frontend Pod Descriptions ==="
           kubectl describe pods -l app=quantumfpo-frontend -n quantumfpo
+          
+          echo "=== Node Resources ==="
+          kubectl top nodes || echo "Metrics server not available"
+          kubectl describe nodes | grep -A 5 "Allocated resources:" || echo "Could not get resource allocation"
+          
           exit 1
         fi
         
