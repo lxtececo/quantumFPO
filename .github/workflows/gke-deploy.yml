@@ -82,18 +82,23 @@ jobs:
         kubectl apply -f k8s/ingress.yaml
         
         echo "All Kubernetes manifests applied successfully"
+        
+        # Verify namespace exists and is ready
+        echo "=== Verifying namespace ==="
+        kubectl get namespace quantumfpo
+        kubectl get all -n quantumfpo
 
     - name: Verify deployment
       run: |
         # Wait for deployments to be ready with timeout
         echo "Waiting for Python backend deployment..."
-        kubectl rollout status deployment/quantumfpo-python-backend --timeout=300s
+        kubectl rollout status deployment/quantumfpo-python-backend -n quantumfpo --timeout=300s
         
         echo "Waiting for Java backend deployment..."
-        kubectl rollout status deployment/quantumfpo-java-backend --timeout=300s
+        kubectl rollout status deployment/quantumfpo-java-backend -n quantumfpo --timeout=300s
         
         echo "Waiting for Frontend deployment..."
-        kubectl rollout status deployment/quantumfpo-frontend --timeout=300s
+        kubectl rollout status deployment/quantumfpo-frontend -n quantumfpo --timeout=300s
         
         # Get deployment status
         echo "=== Deployment Status ==="
