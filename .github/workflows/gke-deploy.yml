@@ -97,8 +97,19 @@ jobs:
         echo "Waiting for Java backend deployment..."
         kubectl rollout status deployment/quantumfpo-java-backend -n quantumfpo --timeout=300s
         
-        echo "Waiting for Frontend deployment..."
-        kubectl rollout status deployment/quantumfpo-frontend -n quantumfpo --timeout=300s
+        echo "Waiting for Frontend deployment (longer timeout due to frontend complexity)..."
+        if ! kubectl rollout status deployment/quantumfpo-frontend -n quantumfpo --timeout=600s; then
+          echo "Frontend deployment failed or timed out. Running diagnostics..."
+          echo "=== Frontend Pod Details ==="
+          kubectl get pods -l app=quantumfpo-frontend -n quantumfpo -o wide
+          echo "=== Frontend Pod Events ==="
+          kubectl get events -n quantumfpo --field-selector involvedObject.name=$(kubectl get pods -l app=quantumfpo-frontend -n quantumfpo -o jsonpath='{.items[0].metadata.name}') --sort-by='.lastTimestamp'
+          echo "=== Frontend Pod Logs ==="
+          kubectl logs -l app=quantumfpo-frontend -n quantumfpo --tail=100
+          echo "=== Frontend Pod Description ==="
+          kubectl describe pods -l app=quantumfpo-frontend -n quantumfpo
+          exit 1
+        fi
         
         # Get deployment status
         echo "=== Deployment Status ==="
