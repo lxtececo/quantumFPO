@@ -40,6 +40,7 @@ COPY --from=build /app/dist /usr/share/nginx/html
 # Copy custom nginx configurations
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY nginx-nonroot.conf /etc/nginx/nginx.conf
+COPY nginx-ci.conf /etc/nginx/nginx-ci.conf
 
 # Copy and setup custom entrypoint script
 COPY docker-entrypoint-custom.sh /docker-entrypoint-custom.sh
