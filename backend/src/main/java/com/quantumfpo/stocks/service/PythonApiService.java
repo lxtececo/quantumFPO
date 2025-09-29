@@ -16,7 +16,7 @@ import java.util.List;
 public class PythonApiService {
     private static final Logger logger = LoggerFactory.getLogger(PythonApiService.class);
     
-    @Value("${python.api.base-url:http://localhost:8001}")
+    @Value("${PYTHON_API_BASE_URL:http://localhost:8002}")
     private String pythonApiBaseUrl;
     
     private final RestTemplate restTemplate;
