@@ -29,18 +29,33 @@ spec:
             configMapKeyRef:
               name: quantumfpo-config
               key: NODE_ENV
+        volumeMounts:
+        - name: nginx-cache
+          mountPath: /var/cache/nginx
+        - name: nginx-run
+          mountPath: /var/run/nginx
+        - name: tmp
+          mountPath: /tmp
         resources:
           requests:
-            memory: "128Mi"
-            cpu: "100m"
+            memory: "256Mi"   # Increased to handle nginx startup better
+            cpu: "250m"      # Increased for better startup performance
           limits:
-            memory: "512Mi"  # Increased from 256Mi for better startup performance
-            cpu: "300m"      # Increased from 200m for better startup performance
+            memory: "1Gi"     # Doubled to prevent OOM kills
+            cpu: "500m"      # Increased for better performance
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 30   # Allow up to 2.5 minutes for startup
         livenessProbe:
           httpGet:
             path: /health
             port: 80
-          initialDelaySeconds: 60  # Increased from 30s to allow more startup time
+          initialDelaySeconds: 0   # No delay since startupProbe handles initial startup
           periodSeconds: 30
           timeoutSeconds: 10
           failureThreshold: 3
@@ -48,15 +63,22 @@ spec:
           httpGet:
             path: /health
             port: 80
-          initialDelaySeconds: 30  # Increased from 10s to allow more startup time
+          initialDelaySeconds: 5   # Reduced since startupProbe ensures container is started
           periodSeconds: 10
           timeoutSeconds: 5
-          failureThreshold: 5     # Increased from 3 to be more tolerant
+          failureThreshold: 3
         securityContext:
           runAsNonRoot: true
           runAsUser: 101  # nginx user
           readOnlyRootFilesystem: false
           allowPrivilegeEscalation: false
+      volumes:
+      - name: nginx-cache
+        emptyDir: {}
+      - name: nginx-run
+        emptyDir: {}
+      - name: tmp
+        emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
