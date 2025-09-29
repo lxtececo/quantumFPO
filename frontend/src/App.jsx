@@ -69,7 +69,7 @@ function App() {
       const period = Number(data.period) || 30;
       const stocks = generateRandomStocks(amount);
       setLastSymbols(stocks);
-      const response = await fetch('http://localhost:8080/api/stocks/load', {
+      const response = await fetch('/api/stocks/load', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -126,7 +126,7 @@ function App() {
     e.preventDefault();
     setOptResult(null);
     try {
-      const response = await fetch('http://localhost:8080/api/stocks/optimize', {
+      const response = await fetch('/api/stocks/optimize', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -153,7 +153,7 @@ function App() {
     e.preventDefault();
     setHybridOptResult(null);
     try {
-      const response = await fetch('http://localhost:8080/api/stocks/hybrid-optimize', {
+      const response = await fetch('/api/stocks/hybrid-optimize', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
