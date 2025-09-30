@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quantumfpo-java-backend
+  namespace: dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: quantumfpo-java-backend
+  template:
+    metadata:
+      labels:
+        app: quantumfpo-java-backend
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+      - name: java-backend
+        image: ghcr.io/lxtececo/quantumfpo-java-backend:fa0749cc4d837f1c1ad0a61ee437138bbda69459
+        ports:
+        - containerPort: 8080
+        env:
+        - name: JAVA_OPTS
+          value: "-Xmx384m -Xms128m"
+        envFrom:
+        - configMapRef:
+            name: quantumfpo-config
+        resources:
+          requests:
+            memory: "400Mi"
+            cpu: "125m" 
+            ephemeral-storage: "1Gi"
+          limits:
+            memory: "768Mi"
+            cpu: "500m"
+            ephemeral-storage: "2Gi"
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop: ["ALL"]
+        volumeMounts:
+        - name: tmp-volume
+          mountPath: /tmp
+      volumes:
+      - name: tmp-volume
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: quantumfpo-java-backend
+  namespace: dev
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: 8080
+  selector:
+    app: quantumfpo-java-backend
+

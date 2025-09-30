@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quantumfpo-frontend
+  namespace: dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: quantumfpo-frontend
+  template:
+    metadata:
+      labels:
+        app: quantumfpo-frontend
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101
+      containers:
+      - name: frontend
+        image: ghcr.io/lxtececo/quantumfpo-frontend:fa0749cc4d837f1c1ad0a61ee437138bbda69459
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+            ephemeral-storage: "512Mi"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+            ephemeral-storage: "1Gi"
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop: ["ALL"]
+        volumeMounts:
+        - name: tmp-volume
+          mountPath: /tmp
+      volumes:
+      - name: tmp-volume
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: quantumfpo-frontend
+  namespace: dev
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 80
+  selector:
+    app: quantumfpo-frontend
+

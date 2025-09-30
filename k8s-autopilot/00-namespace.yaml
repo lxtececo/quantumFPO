@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dev
+  labels:
+    app: quantumfpo
+    environment: alpha
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: quantumfpo-config
+  namespace: dev
+data:
+  PYTHON_API_BASE_URL: "http://quantumfpo-python-backend:8002"
+  ENVIRONMENT: "alpha"
+

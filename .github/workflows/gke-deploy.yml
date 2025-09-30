@@ -1,11 +1,15 @@
-name: Deploy to GKE
+name: Deploy to GKE (DISABLED)
 
+# TEMPORARILY DISABLED - Migrating to GKE Autopilot
+# This workflow is disabled while we transition from Standard GKE to Autopilot clusters
+# Will be re-enabled after autopilot migration is complete
 on:
-  workflow_run:
-    workflows: ["Containerized CI/CD Pipeline"]
-    types:
-      - completed
-    branches: [ main ]
+  # workflow_run:
+  #   workflows: ["Containerized CI/CD Pipeline"]
+  #   types:
+  #     - completed
+  #   branches: [ main ]
+  workflow_dispatch:  # Manual trigger only
 
 permissions:
   contents: read
