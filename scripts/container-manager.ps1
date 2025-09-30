@@ -112,7 +112,7 @@ function Test-Service {
     
     if (-not $runningContainers) {
         Write-Log "Starting development environment for testing..."
-        docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d $ServiceName
+        docker-compose -f docker-compose.dev.yml up -d $ServiceName
         
         if ($LASTEXITCODE -ne 0) {
             Write-Error "Failed to start development container for $ServiceName"
@@ -164,7 +164,7 @@ function Test-All {
     
     # Start development environment
     Write-Log "Ensuring development environment is running..."
-    docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+    docker-compose -f docker-compose.dev.yml up -d
     
     if ($LASTEXITCODE -ne 0) {
         Write-Error "Failed to start development environment"
@@ -187,21 +187,19 @@ function Test-All {
         Write-Success "All service tests passed in development environment"
     } else {
         Write-Error "Some service tests failed in development environment"
-        Write-Log "Check logs with: docker-compose -f docker-compose.yml -f docker-compose.dev.yml logs"
+        Write-Log "Check logs with: docker-compose -f docker-compose.dev.yml logs"
     }
 }
 
 # Start development environment
 function Start-Development {
     Write-Log "Starting development environment..."
-    docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
-    
+    docker-compose -f docker-compose.dev.yml up -d
+
     if ($LASTEXITCODE -ne 0) {
         Write-Error "Failed to start development environment"
         return
-    }
-    
-    Write-Log "Waiting for services to be ready..."
+    }    Write-Log "Waiting for services to be ready..."
     Start-Sleep -Seconds 35
     
     Write-Log "Checking service health..."
@@ -238,14 +236,14 @@ function Start-Development {
     
     if ($healthyServices -lt 3) {
         Write-Warn "Some services may still be starting up. Wait a moment and check logs if needed."
-        Write-Log "Check logs with: docker-compose -f docker-compose.yml -f docker-compose.dev.yml logs [service-name]"
+        Write-Log "Check logs with: docker-compose -f docker-compose.dev.yml logs [service-name]"
     }
 }
 
 # Stop development environment
 function Stop-Development {
     Write-Log "Stopping development environment..."
-    docker-compose -f docker-compose.yml -f docker-compose.dev.yml down --remove-orphans
+    docker-compose -f docker-compose.dev.yml down --remove-orphans
     
     if ($LASTEXITCODE -eq 0) {
         Write-Success "Development environment stopped"
@@ -362,14 +360,12 @@ function Invoke-IntegrationTest {
     
     # Start development services
     Write-Log "Starting development environment for integration tests..."
-    docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
-    
+    docker-compose -f docker-compose.dev.yml up -d
+
     if ($LASTEXITCODE -ne 0) {
         Write-Error "Failed to start development services for integration test"
         return
-    }
-    
-    # Wait for services to be fully ready
+    }    # Wait for services to be fully ready
     Write-Log "Waiting for services to be ready..."
     Start-Sleep -Seconds 45
     
@@ -432,12 +428,12 @@ function Invoke-IntegrationTest {
         } else {
             Write-Error "Integration tests failed"
             Write-Log "Showing recent container logs..."
-            docker-compose -f docker-compose.yml -f docker-compose.dev.yml logs --tail=50
+            docker-compose -f docker-compose.dev.yml logs --tail=50
         }
     }
     catch {
         Write-Error "Failed to run integration tests: $($_.Exception.Message)"
-        docker-compose -f docker-compose.yml -f docker-compose.dev.yml logs --tail=20
+        docker-compose -f docker-compose.dev.yml logs --tail=20
     }
     finally {
         Pop-Location
