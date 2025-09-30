@@ -635,6 +635,16 @@ def run_hybrid_optimization(job_id: str, request: OptimizeRequest):
         logger.error(f"Background hybrid optimization failed for job {job_id}: {str(e)}")
         update_job_status(job_id, "failed", error=str(e))
 
+# Include dynamic portfolio optimization endpoints
+try:
+    from dynamic_portfolio_api_clean import router as dynamic_portfolio_router
+    app.include_router(dynamic_portfolio_router)
+    logger.info("Successfully integrated dynamic portfolio optimization API")
+except ImportError as e:
+    logger.warning(f"Dynamic portfolio optimization not available: {e}")
+except Exception as e:
+    logger.error(f"Failed to integrate dynamic portfolio API: {e}")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
