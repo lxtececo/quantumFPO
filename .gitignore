@@ -64,3 +64,7 @@ backend/maven-status/
 # Exclude local configs
 *.local
 .coverage
+
+# Migration backups (contain sensitive cluster data)
+backups/
+cluster-backups/

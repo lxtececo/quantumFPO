@@ -1,3 +1,0 @@
-NAME                                                CPU(cores)   CPU(%)   MEMORY(bytes)   MEMORY(%)   
-gke-quantumfpo-cluster-default-pool-f632daef-4lss   104m         5%       1573Mi          26%         
-gke-quantumfpo-cluster-default-pool-f632daef-9h8q   111m         5%       1598Mi          26%         

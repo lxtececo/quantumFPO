@@ -1,3 +1,0 @@
-NAME                                      CPU(cores)   CPU(%)   MEMORY(bytes)   MEMORY(%)   
-gk3-quantumfpo-dev-pool-2-09f9f83f-9887   226m         1%       2256Mi          3%          
-gk3-quantumfpo-dev-pool-2-b15a4796-bw96   305m         1%       2095Mi          3%          
