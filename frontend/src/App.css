@@ -393,6 +393,8 @@ body {
   margin-right: 0.5rem;
   display: inline-block;
   vertical-align: middle;
+  min-width: 16px;
+  min-height: 16px;
 }
 
 .form button:disabled {

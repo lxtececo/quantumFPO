@@ -58,7 +58,7 @@ function AppContent() {
 
   // Simulate backend login and token issuance
   const fakeLoginApi = async (username, password) => {
-    await new Promise((r) => setTimeout(r, 500));
+    await new Promise((r) => setTimeout(r, 2000)); // Increased to 2 seconds to see spinner
     if (username === SAMPLE_USER.username && password === SAMPLE_USER.password) {
       return { success: true, token: 'sample-jwt-token-12345' };
     }
