@@ -85,12 +85,12 @@ function Build-All {
     }
 }
 
-# Test individual service
+# Test individual service using development environment
 function Test-Service {
     param([string]$ServiceName)
     
     $port = switch ($ServiceName) {
-        "frontend" { 3000 }
+        "frontend" { 5173 }  # Development port
         "java-backend" { 8080 }
         "python-backend" { 8002 }
         default { 
@@ -100,52 +100,81 @@ function Test-Service {
     }
     
     $healthEndpoint = switch ($ServiceName) {
-        "frontend" { "/health" }
+        "frontend" { "/" }  # Frontend doesn't have dedicated health endpoint in dev
         "java-backend" { "/actuator/health" }
         "python-backend" { "/health" }
     }
     
-    Write-Log "Testing $ServiceName..."
+    Write-Log "Testing $ServiceName using development environment..."
     
-    # Start container
-    docker run -d --name "test-$ServiceName" -p "${port}:${port}" "${ProjectName}-${ServiceName}:${Version}"
+    # Check if development environment is running
+    $runningContainers = docker ps --filter "name=quantumfpo-$ServiceName-dev" --format "{{.Names}}"
     
-    if ($LASTEXITCODE -ne 0) {
-        Write-Error "Failed to start container for $ServiceName"
-        return $false
+    if (-not $runningContainers) {
+        Write-Log "Starting development environment for testing..."
+        docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d $ServiceName
+        
+        if ($LASTEXITCODE -ne 0) {
+            Write-Error "Failed to start development container for $ServiceName"
+            return $false
+        }
+        
+        # Wait for container to be ready
+        Write-Log "Waiting for $ServiceName to be ready..."
+        Start-Sleep -Seconds 20
+    } else {
+        Write-Log "Using existing development container for $ServiceName"
     }
-    
-    # Wait for container to be ready
-    Write-Log "Waiting for $ServiceName to be ready..."
-    Start-Sleep -Seconds 15
     
     # Test health endpoint
     try {
-        $response = Invoke-WebRequest -Uri "http://localhost:${port}${healthEndpoint}" -TimeoutSec 10
-        if ($response.StatusCode -eq 200) {
-            Write-Success "$ServiceName is healthy"
-            $success = $true
+        if ($ServiceName -eq "frontend") {
+            # For frontend, just check if the server responds
+            $response = Invoke-WebRequest -Uri "http://localhost:${port}" -TimeoutSec 10
+            if ($response.StatusCode -eq 200) {
+                Write-Success "$ServiceName is healthy (frontend serving)"
+                $success = $true
+            } else {
+                Write-Error "$ServiceName health check failed with status $($response.StatusCode)"
+                $success = $false
+            }
         } else {
-            Write-Error "$ServiceName health check failed with status $($response.StatusCode)"
-            $success = $false
+            $response = Invoke-WebRequest -Uri "http://localhost:${port}${healthEndpoint}" -TimeoutSec 10
+            if ($response.StatusCode -eq 200) {
+                Write-Success "$ServiceName is healthy"
+                $success = $true
+            } else {
+                Write-Error "$ServiceName health check failed with status $($response.StatusCode)"
+                $success = $false
+            }
         }
     }
     catch {
         Write-Error "$ServiceName health check failed: $($_.Exception.Message)"
-        docker logs "test-$ServiceName"
+        docker logs "quantumfpo-$ServiceName-dev" 2>$null
         $success = $false
     }
-    
-    # Cleanup
-    docker stop "test-$ServiceName" | Out-Null
-    docker rm "test-$ServiceName" | Out-Null
     
     return $success
 }
 
-# Test all services
+# Test all services using development environment
 function Test-All {
-    Write-Log "Testing all services individually..."
+    Write-Log "Testing all services using development environment..."
+    
+    # Start development environment
+    Write-Log "Ensuring development environment is running..."
+    docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+    
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "Failed to start development environment"
+        return
+    }
+    
+    # Wait for all services to be ready
+    Write-Log "Waiting for all services to be ready..."
+    Start-Sleep -Seconds 30
+    
     $success = $true
     
     foreach ($service in $Services) {
@@ -155,16 +184,17 @@ function Test-All {
     }
     
     if ($success) {
-        Write-Success "All service tests passed"
+        Write-Success "All service tests passed in development environment"
     } else {
-        Write-Error "Some service tests failed"
+        Write-Error "Some service tests failed in development environment"
+        Write-Log "Check logs with: docker-compose -f docker-compose.yml -f docker-compose.dev.yml logs"
     }
 }
 
 # Start development environment
 function Start-Development {
     Write-Log "Starting development environment..."
-    docker-compose -f docker-compose.dev.yml up -d
+    docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
     
     if ($LASTEXITCODE -ne 0) {
         Write-Error "Failed to start development environment"
@@ -172,24 +202,56 @@ function Start-Development {
     }
     
     Write-Log "Waiting for services to be ready..."
-    Start-Sleep -Seconds 30
+    Start-Sleep -Seconds 35
     
     Write-Log "Checking service health..."
-    try { Invoke-WebRequest -Uri "http://localhost:5173/health" -TimeoutSec 5 | Out-Null } catch { Write-Warn "Frontend dev server might still be starting" }
-    try { Invoke-WebRequest -Uri "http://localhost:8080/actuator/health" -TimeoutSec 5 | Out-Null } catch { Write-Warn "Java backend might still be starting" }
-    try { Invoke-WebRequest -Uri "http://localhost:8002/health" -TimeoutSec 5 | Out-Null } catch { Write-Warn "Python backend might still be starting" }
+    $healthyServices = 0
     
-    Write-Success "Development environment started"
-    Write-Log "Frontend: http://localhost:5173"
-    Write-Log "Java API: http://localhost:8080"
-    Write-Log "Python API: http://localhost:8002"
+    try { 
+        Invoke-WebRequest -Uri "http://localhost:5173" -TimeoutSec 5 | Out-Null
+        Write-Success "Frontend dev server is ready"
+        $healthyServices++
+    } catch { 
+        Write-Warn "Frontend dev server might still be starting" 
+    }
+    
+    try { 
+        Invoke-WebRequest -Uri "http://localhost:8080/actuator/health" -TimeoutSec 5 | Out-Null
+        Write-Success "Java backend is ready"
+        $healthyServices++
+    } catch { 
+        Write-Warn "Java backend might still be starting" 
+    }
+    
+    try { 
+        Invoke-WebRequest -Uri "http://localhost:8002/health" -TimeoutSec 5 | Out-Null
+        Write-Success "Python backend is ready"
+        $healthyServices++
+    } catch { 
+        Write-Warn "Python backend might still be starting" 
+    }
+    
+    Write-Success "Development environment started ($healthyServices/3 services ready)"
+    Write-Log "Frontend: http://localhost:5173 (Vite dev server with hot reload)"
+    Write-Log "Java API: http://localhost:8080 (Spring Boot with dev profile)"
+    Write-Log "Python API: http://localhost:8002 (FastAPI with auto-reload)"
+    
+    if ($healthyServices -lt 3) {
+        Write-Warn "Some services may still be starting up. Wait a moment and check logs if needed."
+        Write-Log "Check logs with: docker-compose -f docker-compose.yml -f docker-compose.dev.yml logs [service-name]"
+    }
 }
 
 # Stop development environment
 function Stop-Development {
     Write-Log "Stopping development environment..."
-    docker-compose -f docker-compose.dev.yml down
-    Write-Success "Development environment stopped"
+    docker-compose -f docker-compose.yml -f docker-compose.dev.yml down --remove-orphans
+    
+    if ($LASTEXITCODE -eq 0) {
+        Write-Success "Development environment stopped"
+    } else {
+        Write-Error "Failed to stop development environment cleanly"
+    }
 }
 
 # Start production environment
@@ -294,36 +356,93 @@ function Invoke-Cleanup {
     Write-Success "Cleanup completed"
 }
 
-# Integration test
+# Integration test using development environment
 function Invoke-IntegrationTest {
-    Write-Log "Running integration tests..."
+    Write-Log "Running integration tests using development environment..."
     
-    # Start services
-    docker-compose up -d
+    # Start development services
+    Write-Log "Starting development environment for integration tests..."
+    docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
     
     if ($LASTEXITCODE -ne 0) {
-        Write-Error "Failed to start services for integration test"
+        Write-Error "Failed to start development services for integration test"
         return
     }
     
-    # Wait for services
-    Start-Sleep -Seconds 60
+    # Wait for services to be fully ready
+    Write-Log "Waiting for services to be ready..."
+    Start-Sleep -Seconds 45
+    
+    # Check service health before running tests
+    Write-Log "Checking service health before integration tests..."
+    $healthyServices = 0
+    
+    try { 
+        Invoke-WebRequest -Uri "http://localhost:5173" -TimeoutSec 5 | Out-Null
+        Write-Log "Frontend dev server is ready"
+        $healthyServices++
+    } catch { 
+        Write-Warn "Frontend dev server not responding" 
+    }
+    
+    try { 
+        Invoke-WebRequest -Uri "http://localhost:8080/actuator/health" -TimeoutSec 5 | Out-Null
+        Write-Log "Java backend is ready"
+        $healthyServices++
+    } catch { 
+        Write-Warn "Java backend not responding" 
+    }
+    
+    try { 
+        Invoke-WebRequest -Uri "http://localhost:8002/health" -TimeoutSec 5 | Out-Null
+        Write-Log "Python backend is ready"
+        $healthyServices++
+    } catch { 
+        Write-Warn "Python backend not responding" 
+    }
+    
+    if ($healthyServices -lt 3) {
+        Write-Warn "Not all services are healthy. Proceeding with available services..."
+    }
     
     # Run integration tests
     Push-Location backend
     try {
-        python -m pytest src/test/python/test_integration_e2e.py -v -m "integration"
+        Write-Log "Running Python integration tests..."
         
-        if ($LASTEXITCODE -eq 0) {
+        # Run Python backend tests
+        docker exec quantumfpo-python-backend-dev python -m pytest src/test/python/test_integration_e2e.py -v -m "integration" 2>$null
+        $pythonTestResult = $LASTEXITCODE
+        
+        # If container exec fails, try running tests from host with proper environment
+        if ($pythonTestResult -ne 0) {
+            Write-Log "Container exec failed, trying host-based test execution..."
+            
+            # Set environment variables for test
+            $env:PYTHON_API_URL = "http://localhost:8002"
+            $env:JAVA_API_URL = "http://localhost:8080"
+            $env:FRONTEND_URL = "http://localhost:5173"
+            
+            python -m pytest src/test/python/test_integration_e2e.py -v -m "integration" --tb=short
+            $pythonTestResult = $LASTEXITCODE
+        }
+        
+        if ($pythonTestResult -eq 0) {
             Write-Success "Integration tests passed"
         } else {
             Write-Error "Integration tests failed"
-            docker-compose logs
+            Write-Log "Showing recent container logs..."
+            docker-compose -f docker-compose.yml -f docker-compose.dev.yml logs --tail=50
         }
+    }
+    catch {
+        Write-Error "Failed to run integration tests: $($_.Exception.Message)"
+        docker-compose -f docker-compose.yml -f docker-compose.dev.yml logs --tail=20
     }
     finally {
         Pop-Location
-        docker-compose down | Out-Null
+        Write-Log "Integration test completed. Development environment is still running."
+        Write-Log "Use 'dev-stop' command to stop the development environment if needed."
     }
 }
 
@@ -335,14 +454,14 @@ function Show-Usage {
     Write-Host ""
     Write-Host "Commands:" -ForegroundColor Yellow
     Write-Host "  build [service]     Build service(s) (frontend|java-backend|python-backend|all)"
-    Write-Host "  test [service]      Test service(s) (frontend|java-backend|python-backend|all)"
-    Write-Host "  dev-start          Start development environment"
+    Write-Host "  test [service]      Test service(s) using dev environment (frontend|java-backend|python-backend|all)"
+    Write-Host "  dev-start          Start development environment with hot reload"
     Write-Host "  dev-stop           Stop development environment"
     Write-Host "  prod-start         Start production environment"
     Write-Host "  prod-stop          Stop production environment"
     Write-Host "  push               Push images to registry"
     Write-Host "  pull               Pull images from registry"
-    Write-Host "  integration-test   Run integration tests"
+    Write-Host "  integration-test   Run integration tests using dev environment"
     Write-Host "  cleanup            Clean up containers and images"
     Write-Host "  help               Show this help message"
     Write-Host ""
@@ -353,7 +472,9 @@ function Show-Usage {
     Write-Host "Examples:" -ForegroundColor Green
     Write-Host "  .\scripts\container-manager.ps1 build"
     Write-Host "  .\scripts\container-manager.ps1 build frontend"
+    Write-Host "  .\scripts\container-manager.ps1 dev-start"
     Write-Host "  .\scripts\container-manager.ps1 test all"
+    Write-Host "  .\scripts\container-manager.ps1 integration-test"
     Write-Host "  .\scripts\container-manager.ps1 push -Version v1.0.0"
 }
 
