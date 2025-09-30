@@ -159,6 +159,9 @@ body {
   transition: background 0.2s;
   white-space: nowrap;
   justify-self: start;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .button-group {
@@ -385,4 +388,33 @@ body {
   }
 }
 
-/* ...existing code... */
+/* Loading spinner styles */
+.inline-spinner {
+  margin-right: 0.5rem;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.form button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.form button:disabled:hover {
+  background: #4da6ff;
+}
+
+
+
+/* Fixed position spinner */
+.bloch-spinner-fixed {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1000;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 50%;
+  padding: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(4px);
+}

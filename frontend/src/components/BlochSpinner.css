@@ -1,0 +1,145 @@
+/* Bloch Spinner CSS Animations and Styles */
+
+.bloch-spinner-wrapper {
+  display: inline-block;
+  line-height: 0;
+  width: var(--bloch-size, 48px);
+  height: var(--bloch-size, 48px);
+}
+
+.bloch-spinner {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Sphere and ring styling */
+.sphere-outline {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.95;
+}
+
+.equator, .meridian {
+  stroke-dasharray: 0;
+  opacity: 0.85;
+}
+
+/* Orbit rotation: rotate the group continuously */
+.orbit {
+  transform-origin: 50% 50%;
+  animation: orbit-rotate var(--bloch-speed, 1.8s) linear infinite;
+}
+
+/* Subtle wobble on base to give 3D feeling */
+.bloch-base {
+  transform-origin: 50% 50%;
+  animation: base-tilt calc(var(--bloch-speed, 1.8s) * 2) ease-in-out infinite;
+}
+
+/* Dot breathing/pulsing */
+.dot-group {
+  transform-origin: center;
+  animation: dot-pulse calc(var(--bloch-speed, 1.8s) / 2) ease-in-out infinite;
+}
+
+.qubit-core {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.qubit-glow {
+  filter: blur(1px);
+}
+
+/* Keyframes */
+@keyframes orbit-rotate {
+  from { transform: rotateZ(0deg); }
+  to   { transform: rotateZ(360deg); }
+}
+
+@keyframes base-tilt {
+  0%   { transform: rotateX(0deg) rotateY(0deg); }
+  50%  { transform: rotateX(6deg) rotateY(-6deg); }
+  100% { transform: rotateX(0deg) rotateY(0deg); }
+}
+
+@keyframes dot-pulse {
+  0%   { transform: scale(0.92); opacity: 0.95; }
+  50%  { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(0.92); opacity: 0.95; }
+}
+
+/* Respect user preference for reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .orbit, .bloch-base, .dot-group {
+    animation: none !important;
+  }
+}
+
+/* Fixed positioning for bottom-right corner */
+.bloch-spinner-fixed {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 1000;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 50%;
+  padding: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* Button loading states */
+.button-loading {
+  position: relative;
+  color: transparent !important;
+  pointer-events: none;
+  cursor: default;
+}
+
+.button-loading::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 20px;
+  height: 20px;
+}
+
+/* Inline spinner for buttons */
+.bloch-spinner-inline {
+  width: 20px;
+  height: 20px;
+  vertical-align: middle;
+  margin-right: 8px;
+}
+
+/* Loading overlay */
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  z-index: 10;
+  border-radius: inherit;
+}
+
+.loading-overlay .bloch-spinner-wrapper {
+  margin-bottom: 16px;
+}
+
+.loading-overlay .loading-text {
+  color: #666;
+  font-size: 0.9rem;
+  text-align: center;
+  max-width: 200px;
+}

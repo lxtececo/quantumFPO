@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 import { Line } from 'react-chartjs-2';
+import { LoadingProvider, useLoading } from './context/LoadingContext';
+import BlochSpinner from './components/BlochSpinner';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -14,7 +16,8 @@ import {
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
-function App() {
+function AppContent() {
+  const { setLoading, isLoading } = useLoading();
   const [hybridOptResult, setHybridOptResult] = useState(null);
 
   // Sample user for login validation
@@ -102,7 +105,9 @@ function App() {
     e.preventDefault();
     setLoginError('');
     if (login.username && login.password) {
+      setLoading('login', true, 'Authenticating...');
       const res = await fakeLoginApi(login.username, login.password);
+      setLoading('login', false);
       if (res.success) {
         setLoggedIn(true);
         setAuthToken(res.token);
@@ -126,6 +131,7 @@ function App() {
     e.preventDefault();
     setOptResult(null);
     try {
+      setLoading('optimizeClassic', true, 'Optimizing portfolio (classic)...');
       const response = await fetch('/api/stocks/optimize', {
         method: 'POST',
         headers: {
@@ -137,6 +143,7 @@ function App() {
           varPercent: Number(transaction.varPercent)
         })
       });
+      setLoading('optimizeClassic', false);
       if (!response.ok) {
         const error = await response.json();
         setOptResult({ error: error.message || 'Backend error' });
@@ -145,6 +152,7 @@ function App() {
       const result = await response.json();
       setOptResult(result);
     } catch (err) {
+      setLoading('optimizeClassic', false);
       setOptResult({ error: err.message });
     }
   };
@@ -153,6 +161,7 @@ function App() {
     e.preventDefault();
     setHybridOptResult(null);
     try {
+      setLoading('optimizeHybrid', true, 'Optimizing portfolio (quantum hybrid)...');
       const response = await fetch('/api/stocks/hybrid-optimize', {
         method: 'POST',
         headers: {
@@ -165,6 +174,7 @@ function App() {
           qcSimulator: transaction.qcSimulator
         })
       });
+      setLoading('optimizeHybrid', false);
       if (!response.ok) {
         const error = await response.json();
         setHybridOptResult({ error: error.message || 'Backend error' });
@@ -173,6 +183,7 @@ function App() {
       const result = await response.json();
       setHybridOptResult(result);
     } catch (err) {
+      setLoading('optimizeHybrid', false);
       setHybridOptResult({ error: err.message });
     }
   };
@@ -183,7 +194,9 @@ function App() {
     setTransactionSuccess('');
     setStockData([]);
     if (transaction.stockAmount > 0) {
+      setLoading('loadStocks', true, `Loading ${transaction.stockAmount} stocks...`);
       const res = await realTransactionApi(transaction, authToken);
+      setLoading('loadStocks', false);
       if (res.success) {
         setTransactionSuccess('Stocks loaded and stored for optimization!');
         setStockData(res.data || []);
@@ -229,7 +242,7 @@ function App() {
 
   return (
     <div className="container">
-      <h1>Quantum Portfolio Optimization</h1>
+      <h1>quantumFPO</h1>
       {!loggedIn ? (
         <form className="form login-form" onSubmit={handleLoginSubmit}>
           <h2>Login</h2>
@@ -249,7 +262,16 @@ function App() {
             onChange={handleLoginChange}
             required
           />
-          <button type="submit">Login</button>
+          <button type="submit" disabled={isLoading('login')}>
+            {isLoading('login') ? (
+              <>
+                <BlochSpinner size={16} className="inline-spinner" />
+                Authenticating...
+              </>
+            ) : (
+              'Login'
+            )}
+          </button>
           {loginError && <p className="error">{loginError}</p>}
           <p style={{fontSize:'0.95rem',color:'#888'}}>Sample user: <b>demo</b> / <b>quantum123</b></p>
         </form>
@@ -328,9 +350,36 @@ function App() {
             </div>
           </div>
           <div className="form-buttons">
-            <button type="submit">Load Stocks</button>
-            <button type="button" onClick={handleOptimizePortfolio}>Optimize Portfolio Classic</button>
-            <button type="button" style={{background:'#6c47ff'}} onClick={handleHybridOptimizePortfolio}>Optimize Portfolio Hybrid</button>
+            <button type="submit" disabled={isLoading('loadStocks')}>
+              {isLoading('loadStocks') ? (
+                <>
+                  <BlochSpinner size={16} className="inline-spinner" />
+                  Loading...
+                </>
+              ) : (
+                'Load Stocks'
+              )}
+            </button>
+            <button type="button" onClick={handleOptimizePortfolio} disabled={isLoading('optimizeClassic')}>
+              {isLoading('optimizeClassic') ? (
+                <>
+                  <BlochSpinner size={16} className="inline-spinner" />
+                  Optimizing...
+                </>
+              ) : (
+                'Optimize Portfolio Classic'
+              )}
+            </button>
+            <button type="button" style={{background:'#6c47ff'}} onClick={handleHybridOptimizePortfolio} disabled={isLoading('optimizeHybrid')}>
+              {isLoading('optimizeHybrid') ? (
+                <>
+                  <BlochSpinner size={16} className="inline-spinner" />
+                  Optimizing...
+                </>
+              ) : (
+                'Optimize Portfolio Hybrid'
+              )}
+            </button>
           </div>
         </form>
       )}
@@ -441,6 +490,14 @@ function App() {
         </div>
       )}
     </div>
+  );
+}
+
+function App() {
+  return (
+    <LoadingProvider>
+      <AppContent />
+    </LoadingProvider>
   );
 }
 
