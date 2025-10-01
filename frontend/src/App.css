@@ -76,33 +76,166 @@ body {
 /* Portfolio form specific styles */
 .form.portfolio-form {
   width: 100%;
-  display: grid;
-  grid-template-columns: max-content max-content;
-  gap: 3rem;
-  align-items: start;
-  justify-content: start;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
 }
 
-.form.portfolio-form .form-inputs {
+/* Three-column layout for organized input sections */
+.form.portfolio-form .form-inputs-container {
+  display: grid !important;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+  width: 100%;
+}
+
+/* Wide screen: Three distinct columns */
+@media (min-width: 1200px) {
+  .form.portfolio-form .form-inputs-container {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr 1fr !important;
+    gap: 2rem;
+  }
+}
+
+/* Medium-Large screen: Three columns but smaller gap */
+@media (min-width: 1024px) and (max-width: 1199px) {
+  .form.portfolio-form .form-inputs-container {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr 1fr !important;
+    gap: 1.5rem;
+  }
+}
+
+/* Medium screen: Two columns */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .form.portfolio-form .form-inputs-container {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 1.5rem;
+  }
+}
+
+/* Each input section styling */
+.input-section {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  border: 1px solid #e9ecef;
+  /* Debug: Temporary visual indicator */
+  min-height: 200px;
 }
 
-.form.portfolio-form .form-buttons {
+.input-section h3 {
+  margin: 0 0 15px 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  padding-bottom: 8px;
+  border-bottom: 2px solid currentColor;
+}
+
+.input-section.load-stocks h3 {
+  color: #28a745;
+  border-bottom-color: #28a745;
+}
+
+.input-section.dynamic-params h3 {
+  color: #7c3aed;
+  border-bottom-color: #7c3aed;
+}
+
+.input-section.quantum-params h3 {
+  color: #dc3545;
+  border-bottom-color: #dc3545;
+}
+
+/* Parameter section headers */
+.form.portfolio-form h3 {
+  margin-top: 20px;
+  margin-bottom: 10px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  border-bottom: 2px solid currentColor;
+  padding-bottom: 5px;
+}
+
+/* Input field containers with labels */
+.form.portfolio-form .form-inputs > div {
   display: flex;
   flex-direction: column;
+  gap: 8px;
+}
+
+.form.portfolio-form label {
+  font-weight: 500;
+  color: #374151;
+  font-size: 0.9rem;
+}
+
+.form.portfolio-form input[type="number"] {
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form.portfolio-form input[type="number"]:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Speed presets and action buttons container */
+.form-actions-container {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  width: 100%;
+}
+
+/* Action buttons layout */
+.form.portfolio-form .form-buttons {
+  display: flex;
+  flex-wrap: wrap;
   gap: 1rem;
-  padding-top: 0;
-  min-width: 250px;
-  max-width: 300px;
-  align-self: end;
+  justify-content: center;
+  width: 100%;
 }
 
 .form.portfolio-form .form-buttons button {
-  width: 100%;
+  flex: 1 1 auto;
+  min-width: 180px;
+  max-width: 250px;
   padding: 0.75rem 1rem;
   white-space: nowrap;
+}
+
+/* Wide screen - horizontal button layout */
+@media (min-width: 768px) {
+  .form.portfolio-form .form-buttons {
+    flex-direction: row;
+    justify-content: space-around;
+  }
+  
+  .form.portfolio-form .form-buttons button {
+    flex: 0 1 auto;
+  }
+}
+
+/* Narrow screen - stack buttons */
+@media (max-width: 767px) {
+  .form.portfolio-form .form-buttons {
+    flex-direction: column;
+  }
+  
+  .form.portfolio-form .form-buttons button {
+    width: 100%;
+    max-width: none;
+  }
 }
 
 .form-messages {
@@ -179,6 +312,29 @@ body {
   min-width: -webkit-fill-available;
 }
 
+/* Speed preset radio button styles */
+.speed-preset {
+  border-color: #e9ecef !important;
+  background-color: #ffffff;
+}
+
+.speed-preset:hover {
+  border-color: #7c3aed !important;
+  background-color: #f8f9fa;
+  box-shadow: 0 2px 4px rgba(124, 58, 237, 0.1);
+}
+
+.speed-preset-selected {
+  border-color: #7c3aed !important;
+  background-color: #f3f0ff;
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.2);
+}
+
+.speed-preset-selected:hover {
+  border-color: #6c2bd9 !important;
+  background-color: #ede9fe;
+}
+
 /* Mobile-first approach */
 @media (max-width: 768px) {
   #root {
@@ -211,17 +367,34 @@ body {
   }
   
   .form.portfolio-form {
-    grid-template-columns: 1fr;
     gap: 1rem;
   }
   
-  .form.portfolio-form .form-buttons {
-    padding-top: 0;
-    min-width: auto;
-    align-self: stretch;
+  /* Mobile: Single column - only applies below tablet size */
+  @media (max-width: 767px) {
+    .form.portfolio-form .form-inputs-container {
+      display: grid !important;
+      grid-template-columns: 1fr !important;
+      gap: 1rem;
+    }
   }
   
-  .form.portfolio-form > div {
+  .input-section {
+    padding: 15px;
+  }
+
+  .form-actions-container {
+    gap: 1rem;
+  }
+
+  .form.portfolio-form .form-buttons {
+    flex-direction: column;
+  }
+  
+  .form.portfolio-form .form-buttons button {
+    width: 100%;
+    max-width: none;
+  }  .form.portfolio-form > div {
     max-width: 100%;
   }
   
@@ -362,6 +535,11 @@ body {
   border-left: 4px solid #6c47ff;
 }
 
+.dynamic-result {
+  background: #f0fff4;
+  border-left: 4px solid #00c851;
+}
+
 .optimization-result h3 {
   margin-top: 0;
   margin-bottom: 1rem;
@@ -381,6 +559,69 @@ body {
   box-sizing: border-box;
 }
 
+/* New unified result display styles */
+.result-section {
+  margin-bottom: 1.5rem;
+}
+
+.result-section h4 {
+  margin: 0 0 0.75rem 0;
+  color: #2c3e50;
+  font-size: 1.1rem;
+  font-weight: 600;
+  border-bottom: 2px solid #e9ecef;
+  padding-bottom: 0.5rem;
+}
+
+.result-section h5 {
+  margin: 1rem 0 0.5rem 0;
+  color: #495057;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.weights-grid, .metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.weight-item, .metric-item {
+  background: #fff;
+  padding: 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #e9ecef;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.asset-name, .metric-name {
+  font-weight: 500;
+  color: #495057;
+}
+
+.weight-value, .metric-value {
+  font-weight: 600;
+  color: #28a745;
+  font-family: 'Courier New', monospace;
+}
+
+.period-allocation {
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  border-left: 3px solid #007bff;
+}
+
+@media (max-width: 768px) {
+  .weights-grid, .metrics-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 768px) {
   .optimization-results-container {
     grid-template-columns: 1fr;
@@ -393,8 +634,10 @@ body {
   margin-right: 0.5rem;
   display: inline-block;
   vertical-align: middle;
-  min-width: 16px;
-  min-height: 16px;
+  min-width: 32px;
+  min-height: 32px;
+  border: 2px solid red; /* Debug: make spinner visible */
+  background: yellow; /* Debug: make spinner visible */
 }
 
 .form button:disabled {

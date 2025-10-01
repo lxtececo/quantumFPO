@@ -80,15 +80,14 @@
 /* Fixed positioning for bottom-right corner */
 .bloch-spinner-fixed {
   position: fixed;
-  bottom: 24px;
-  right: 24px;
+  bottom: 30px;
+  right: 30px;
   z-index: 1000;
-  background: rgba(255, 255, 255, 0.95);
+  background: transparent;
   border-radius: 50%;
   padding: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 0 20px rgba(100, 210, 255, 0.5);
+  backdrop-filter: blur(4px);
 }
 
 /* Button loading states */
@@ -115,6 +114,19 @@
   height: 20px;
   vertical-align: middle;
   margin-right: 8px;
+  background: transparent !important;
+  border: none !important;
+}
+
+.inline-spinner {
+  background: transparent !important;
+  vertical-align: middle;
+  border: none !important;
+}
+
+.inline-spinner .bloch-spinner-wrapper {
+  background: transparent !important;
+  border: none !important;
 }
 
 /* Loading overlay */

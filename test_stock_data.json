@@ -1,0 +1,4 @@
+{
+  "stocks": ["AAPL", "GOOGL", "MSFT"],
+  "period": 30
+}

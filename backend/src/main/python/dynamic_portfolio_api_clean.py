@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 # Constants
 JOB_NOT_FOUND_ERROR = "Job not found"
-OPTIMIZATION_TIMEOUT = 300.0  # 5 minutes
+OPTIMIZATION_TIMEOUT = 90.0  # 1.5 minutes maximum for API
 
 # In-memory job storage (replace with Redis in production)
 active_jobs: Dict[str, Dict] = {}
@@ -62,11 +62,14 @@ class DynamicOptimizationRequest(BaseModel):
     
     # Quantum parameters  
     bit_resolution: int = Field(2, description="Bits per allocation variable", ge=1, le=4)
-    num_generations: int = Field(20, description="DE generations", ge=5, le=100)
-    population_size: int = Field(40, description="DE population size", ge=10, le=100)
+    num_generations: int = Field(20, description="DE generations", ge=1, le=100)
+    population_size: int = Field(40, description="DE population size", ge=2, le=100)
+    estimator_shots: int = Field(10000, description="Quantum estimator shots", ge=10, le=100000)
+    sampler_shots: int = Field(50000, description="Quantum sampler shots", ge=50, le=200000)
     
     # Execution settings
     async_execution: bool = Field(False, description="Run optimization asynchronously")
+    test_mode: bool = Field(False, description="Use fast classical approximation for testing")
     previous_allocation: Optional[Dict[str, float]] = Field(None, description="Previous period allocations")
     quantum_backend: Optional[str] = Field(None, description="Quantum backend to use (auto-select if None)")
     
@@ -326,13 +329,41 @@ async def run_optimization_sync(job_id: str, request: DynamicOptimizationRequest
 
 
 async def run_optimization_background(job_id: str, request: DynamicOptimizationRequest) -> None:
-    """Run optimization in background task"""
+    """Run optimization in background task without timeout constraints"""
     try:
-        await run_optimization_sync(job_id, request)
+        # Update job status
+        active_jobs[job_id]["status"] = "running"
+        active_jobs[job_id]["started_at"] = datetime.now(timezone.utc)
+        
+        # Convert request to config
+        config = create_config_from_request(request)
+        
+        # Load price data
+        prices_df = load_price_data([asset.symbol for asset in request.assets])
+        
+        # Convert previous allocation if provided
+        prev_allocation = None
+        if request.previous_allocation:
+            prev_allocation = np.array([
+                request.previous_allocation.get(asset.symbol, 0.0) 
+                for asset in request.assets
+            ])
+        
+        # Run optimization WITHOUT timeout for background tasks
+        result = await run_quantum_optimization(prices_df, config, prev_allocation, request.quantum_backend)
+        
+        # Store result
+        active_jobs[job_id]["status"] = "completed"
+        active_jobs[job_id]["result"] = result
+        active_jobs[job_id]["completed_at"] = datetime.now(timezone.utc)
+        
         logger.info("Background optimization %s completed successfully", job_id)
         
     except Exception as e:
         logger.error("Background optimization %s failed: %s", job_id, e)
+        active_jobs[job_id]["status"] = "failed"
+        active_jobs[job_id]["error_message"] = str(e)
+        active_jobs[job_id]["completed_at"] = datetime.now(timezone.utc)
 
 
 async def run_quantum_optimization(prices_df: pd.DataFrame, 
@@ -363,9 +394,11 @@ def create_config_from_request(request: DynamicOptimizationRequest) -> DynamicOp
         transaction_fee=request.transaction_fee,
         num_generations=request.num_generations,
         population_size=request.population_size,
-        # Use reduced shots for API responsiveness
-        estimator_shots=10000,
-        sampler_shots=50000
+        # Use ultra-minimal shots for API responsiveness
+        estimator_shots=min(request.estimator_shots, 100),  # Cap at 100 for API
+        sampler_shots=min(request.sampler_shots, 500),      # Cap at 500 for API
+        # Enable test mode for ultra-fast development testing
+        test_mode=request.test_mode
     )
 
 

@@ -150,7 +150,9 @@ def test_basic_optimization():
         transaction_fee=0.005
     )
     
-    total_qubits = calculate_total_qubits(len(symbols), config)
+    # Calculate periods: num_time_steps + 1 (as per prepare_multi_period_data logic)
+    num_periods = config.num_time_steps + 1
+    total_qubits = calculate_total_qubits(len(symbols), num_periods, config)
     print(f"Total qubits required: {total_qubits}")
     
     # Run optimization
@@ -420,7 +422,9 @@ def test_performance_comparison():
         print(f"  Generations: {config.num_generations}")
         print(f"  Population: {config.population_size}")
         
-        total_qubits = calculate_total_qubits(len(symbols), config)
+        # Calculate periods: num_time_steps + 1 (as per prepare_multi_period_data logic)
+        num_periods = config.num_time_steps + 1
+        total_qubits = calculate_total_qubits(len(symbols), num_periods, config)
         print(f"  Total qubits: {total_qubits}")
         
         try:
@@ -540,7 +544,9 @@ def test_complex_basic_optimization():
         transaction_fee=0.005
     )
     
-    total_qubits = calculate_total_qubits(len(symbols), config)
+    # Calculate periods: num_time_steps + 1 (as per prepare_multi_period_data logic)
+    num_periods = config.num_time_steps + 1
+    total_qubits = calculate_total_qubits(len(symbols), num_periods, config)
     print(f"Total qubits required: {total_qubits}")
     
     # Run optimization
@@ -677,7 +683,9 @@ def test_complex_performance_comparison():
         print(f"  Generations: {config.num_generations}")
         print(f"  Population: {config.population_size}")
         
-        total_qubits = calculate_total_qubits(len(symbols), config)
+        # Calculate periods: num_time_steps + 1 (as per prepare_multi_period_data logic)
+        num_periods = config.num_time_steps + 1
+        total_qubits = calculate_total_qubits(len(symbols), num_periods, config)
         print(f"  Total qubits: {total_qubits}")
         
         try:

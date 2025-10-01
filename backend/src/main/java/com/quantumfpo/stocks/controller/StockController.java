@@ -194,6 +194,68 @@ public class StockController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
     }
+
+    @PostMapping("/dynamic-optimize")
+    public ResponseEntity<Map<String, Object>> dynamicOptimizePortfolio(@RequestBody OptimizeRequest request) {
+        try {
+            // Validate request parameters first (immediate validation)
+            if (request.getVarPercentRaw() == null) {
+                logger.warn("[REST] Missing required varPercent parameter for dynamic");
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put(ERROR_KEY, "VaR percent is required");
+                return ResponseEntity.badRequest().body(errorResponse);
+            }
+            
+            if (request.getVarPercent() < 0 || request.getVarPercent() > 100) {
+                logger.warn("[REST] Invalid varPercent value for dynamic: {}", request.getVarPercent());
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put(ERROR_KEY, "VaR percent must be between 0 and 100");
+                return ResponseEntity.badRequest().body(errorResponse);
+            }
+            
+            // Validate stocks list
+            if (request.getStocks() == null || request.getStocks().isEmpty()) {
+                logger.warn("[REST] No stocks specified for dynamic optimization");
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put(ERROR_KEY, "No stocks specified for optimization");
+                return ResponseEntity.badRequest().body(errorResponse);
+            }
+            
+            // Check Python API health before processing (infrastructure dependency)
+            if (!pythonApiService.isHealthy()) {
+                logger.warn("[REST] Python API service is not available for dynamic optimization");
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put(ERROR_KEY, "Python optimization service is not available");
+                return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(errorResponse);
+            }
+            
+            // Prepare and validate stock data (business logic validation)
+            List<Map<String, Object>> stockData = prepareStockDataForApi(request);
+            
+            if (stockData.isEmpty()) {
+                logger.warn("[REST] No stock data found for dynamic optimization");
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put(ERROR_KEY, "No stock data available for optimization");
+                return ResponseEntity.badRequest().body(errorResponse);
+            }
+            
+            // Call Python REST API for enhanced dynamic optimization
+            logger.info("[REST] Starting enhanced dynamic portfolio optimization via REST API");
+            Map<String, Object> result = pythonApiService.optimizeDynamic(
+                stockData, 
+                request.getVarPercent()
+            );
+            
+            logger.info("[REST] Enhanced dynamic optimization completed successfully via REST API");
+            return ResponseEntity.ok(result);
+            
+        } catch (Exception e) {
+            logger.error("[REST] Error during enhanced dynamic portfolio optimization", e);
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put(ERROR_KEY, "Enhanced dynamic optimization failed: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
     
     @GetMapping("/python-api/health")
     public ResponseEntity<Map<String, Object>> checkPythonApiHealth() {
@@ -254,5 +316,49 @@ public class StockController {
         
         logger.info("[REST] Prepared {} stock data points for API call", stockData.size());
         return stockData;
+    }
+    
+    @GetMapping("/dynamic-job/{jobId}/status")
+    public ResponseEntity<Map<String, Object>> getDynamicJobStatus(@PathVariable String jobId) {
+        try {
+            Map<String, Object> status = pythonApiService.getDynamicJobStatus(jobId);
+            return ResponseEntity.ok(status);
+        } catch (Exception e) {
+            logger.error("[REST] Error getting dynamic job status for {}: {}", jobId, e.getMessage());
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put(ERROR_KEY, "Failed to get job status: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+    
+    @GetMapping("/dynamic-job/{jobId}/result")
+    public ResponseEntity<Map<String, Object>> getDynamicJobResult(@PathVariable String jobId) {
+        try {
+            Map<String, Object> result = pythonApiService.getDynamicJobResult(jobId);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            logger.error("[REST] Error getting dynamic job result for {}: {}", jobId, e.getMessage());
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put(ERROR_KEY, "Failed to get job result: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+    
+    @PostMapping("/dynamic-job/{jobId}/cancel")
+    public ResponseEntity<Map<String, Object>> cancelDynamicJob(@PathVariable String jobId) {
+        try {
+            // For now, return a simple response since the Python API doesn't have cancel yet
+            // This can be enhanced later to call Python API's cancel endpoint
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Job cancellation requested");
+            response.put("job_id", jobId);
+            logger.info("[REST] Job cancellation requested for {}", jobId);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("[REST] Error cancelling dynamic job {}: {}", jobId, e.getMessage());
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put(ERROR_KEY, "Failed to cancel job: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
     }
 }

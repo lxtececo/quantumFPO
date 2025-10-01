@@ -1,0 +1,6 @@
+{
+  "stocks": ["AAPL", "GOOGL", "MSFT"],
+  "varPercent": 5.0,
+  "riskFreeRate": 0.02,
+  "qcSimulator": true
+}

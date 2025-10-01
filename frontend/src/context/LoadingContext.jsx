@@ -53,8 +53,8 @@ export const LoadingProvider = ({ children }) => {
       {hasAnyLoading() && (
         <BlochSpinner 
           className="bloch-spinner-fixed"
-          size={40}
-          speed={1.5}
+          size={60}
+          speed={1.2}
           ariaLabel={getCurrentLoadingMessage()}
         />
       )}

@@ -56,13 +56,16 @@ class DynamicOptimizationConfig:
     num_generations: int = 20
     population_size: int = 40
     recombination: float = 0.4
-    max_parallel_jobs: int = 5
+    max_parallel_jobs: int = 8  # Increase to use more CPU cores
     
     # Quantum settings
     estimator_shots: int = 25000
     sampler_shots: int = 100000
     ansatz_reps: int = 3
     use_optimized_ansatz: bool = True
+    
+    # Testing mode for ultra-fast development
+    test_mode: bool = False  # Use classical approximation for fastest testing
 
 
 class OptimizationObjective(Enum):
@@ -73,18 +76,19 @@ class OptimizationObjective(Enum):
     CONSTRAINT = "constraint_penalty"    # P: Investment restrictions
 
 
-def calculate_total_qubits(num_assets: int, config: DynamicOptimizationConfig) -> int:
+def calculate_total_qubits(num_assets: int, num_periods: int, config: DynamicOptimizationConfig) -> int:
     """
-    Calculate total qubits needed: na × nt × nq
+    Calculate total qubits needed: na × np × nq
     
     Args:
         num_assets: Number of portfolio assets
+        num_periods: Actual number of periods in optimization  
         config: Optimization configuration
         
     Returns:
         Total number of qubits required
     """
-    return num_assets * config.num_time_steps * config.bit_resolution
+    return num_assets * num_periods * config.bit_resolution
 
 
 def prepare_multi_period_data(prices: pd.DataFrame, config: DynamicOptimizationConfig) -> List[pd.DataFrame]:
@@ -132,7 +136,7 @@ def build_dynamic_qubo(periods_data: List[pd.DataFrame],
     """
     num_assets = periods_data[0].shape[1] 
     num_periods = len(periods_data)
-    total_qubits = calculate_total_qubits(num_assets, config)
+    total_qubits = calculate_total_qubits(num_assets, num_periods, config)
     
     print(f"[LOG] Building dynamic QUBO: {num_assets} assets, {num_periods} periods, {total_qubits} qubits")
     
@@ -143,8 +147,8 @@ def build_dynamic_qubo(periods_data: List[pd.DataFrame],
     # Build each objective component
     linear, quadratic = add_return_objective(linear, quadratic, periods_data, config)
     linear, quadratic = add_risk_objective(linear, quadratic, periods_data, config)
-    linear, quadratic = add_transaction_cost_objective(linear, quadratic, config, previous_allocation)
-    linear, quadratic = add_constraint_penalties(linear, quadratic, config)
+    linear, quadratic = add_transaction_cost_objective(linear, quadratic, config, num_periods, previous_allocation)
+    linear, quadratic = add_constraint_penalties(linear, quadratic, config, num_periods, num_assets)
     
     print(f"[LOG] QUBO construction complete: linear shape {linear.shape}, quadratic shape {quadratic.shape}")
     
@@ -167,6 +171,7 @@ def add_return_objective(linear: np.ndarray, quadratic: np.ndarray,
         Updated (linear, quadratic) coefficients
     """
     num_assets = periods_data[0].shape[1]
+    num_periods = len(periods_data)
     
     for period_idx, period_prices in enumerate(periods_data):
         # Calculate expected returns for this period
@@ -175,7 +180,7 @@ def add_return_objective(linear: np.ndarray, quadratic: np.ndarray,
         # Add to linear terms (negative for maximization)
         for asset_idx in range(num_assets):
             for bit_idx in range(config.bit_resolution):
-                qubit_idx = _get_qubit_index(asset_idx, period_idx, bit_idx, config)
+                qubit_idx = _get_qubit_index(asset_idx, period_idx, bit_idx, config, num_periods)
                 
                 # Weight by bit significance (2^bit_idx)
                 bit_weight = 2 ** bit_idx
@@ -203,6 +208,7 @@ def add_risk_objective(linear: np.ndarray, quadratic: np.ndarray,
         Updated (linear, quadratic) coefficients
     """
     num_assets = periods_data[0].shape[1]
+    num_periods = len(periods_data)
     
     for period_idx, period_prices in enumerate(periods_data):
         # Calculate covariance matrix for this period
@@ -213,8 +219,17 @@ def add_risk_objective(linear: np.ndarray, quadratic: np.ndarray,
             for j in range(num_assets):
                 for bit_i in range(config.bit_resolution):
                     for bit_j in range(config.bit_resolution):
-                        qubit_i = _get_qubit_index(i, period_idx, bit_i, config)
-                        qubit_j = _get_qubit_index(j, period_idx, bit_j, config)
+                        qubit_i = _get_qubit_index(i, period_idx, bit_i, config, num_periods)
+                        qubit_j = _get_qubit_index(j, period_idx, bit_j, config, num_periods)
+                        
+                        # Debug bounds checking
+                        if qubit_i >= len(linear) or qubit_j >= len(linear):
+                            print(f"[ERROR] Qubit index out of bounds: qubit_i={qubit_i}, qubit_j={qubit_j}, linear_size={len(linear)}")
+                            continue
+                            
+                        if i >= S.shape[0] or j >= S.shape[1]:
+                            print(f"[ERROR] Covariance matrix index out of bounds: i={i}, j={j}, S_shape={S.shape}")
+                            continue
                         
                         # Bit weights
                         weight_i = 2 ** bit_i / ((2 ** config.bit_resolution) - 1)
@@ -235,6 +250,7 @@ def add_risk_objective(linear: np.ndarray, quadratic: np.ndarray,
 
 def add_transaction_cost_objective(linear: np.ndarray, quadratic: np.ndarray,
                                  config: DynamicOptimizationConfig,
+                                 num_periods: int,
                                  previous_allocation: Optional[np.ndarray] = None) -> Tuple[np.ndarray, np.ndarray]:
     """
     Add transaction cost minimization: C
@@ -245,23 +261,24 @@ def add_transaction_cost_objective(linear: np.ndarray, quadratic: np.ndarray,
         linear: Linear QUBO coefficients
         quadratic: Quadratic QUBO matrix  
         config: Optimization configuration
+        num_periods: Actual number of periods in the optimization
         previous_allocation: Previous period allocation (if available)
         
     Returns:
         Updated (linear, quadratic) coefficients
     """
-    if previous_allocation is None or config.num_time_steps <= 1:
+    if previous_allocation is None or num_periods <= 1:
         return linear, quadratic
         
     num_assets = len(previous_allocation)
     
     # Transaction costs apply between consecutive periods
-    for period_idx in range(1, config.num_time_steps):
+    for period_idx in range(1, num_periods):
         for asset_idx in range(num_assets):
             # Current period allocation qubits
             current_qubits = []
             for bit_idx in range(config.bit_resolution):
-                qubit_idx = _get_qubit_index(asset_idx, period_idx, bit_idx, config)
+                qubit_idx = _get_qubit_index(asset_idx, period_idx, bit_idx, config, num_periods)
                 current_qubits.append(qubit_idx)
             
             # Previous period allocation (from previous_allocation array)
@@ -276,7 +293,9 @@ def add_transaction_cost_objective(linear: np.ndarray, quadratic: np.ndarray,
 
 
 def add_constraint_penalties(linear: np.ndarray, quadratic: np.ndarray,
-                           config: DynamicOptimizationConfig) -> Tuple[np.ndarray, np.ndarray]:
+                           config: DynamicOptimizationConfig, 
+                           num_periods: int,
+                           num_assets: int = 3) -> Tuple[np.ndarray, np.ndarray]:
     """
     Add constraint penalty terms: ρP
     
@@ -288,14 +307,15 @@ def add_constraint_penalties(linear: np.ndarray, quadratic: np.ndarray,
         linear: Linear QUBO coefficients
         quadratic: Quadratic QUBO matrix
         config: Optimization configuration
+        num_periods: Actual number of periods in the optimization
+        num_assets: Number of assets in the portfolio
         
     Returns:
         Updated (linear, quadratic) coefficients
     """
-    num_assets = config.num_time_steps  # This should be derived from periods_data
     
     # Budget constraint: (Σ allocations - 1)² penalty
-    for period_idx in range(config.num_time_steps):
+    for period_idx in range(num_periods):
         # Add penalty for deviating from full investment (sum = 1)
         penalty_strength = config.restriction_coefficient
         
@@ -304,8 +324,8 @@ def add_constraint_penalties(linear: np.ndarray, quadratic: np.ndarray,
             for asset_j in range(num_assets):
                 for bit_i in range(config.bit_resolution):
                     for bit_j in range(config.bit_resolution):
-                        qubit_i = _get_qubit_index(asset_i, period_idx, bit_i, config)
-                        qubit_j = _get_qubit_index(asset_j, period_idx, bit_j, config)
+                        qubit_i = _get_qubit_index(asset_i, period_idx, bit_i, config, num_periods)
+                        qubit_j = _get_qubit_index(asset_j, period_idx, bit_j, config, num_periods)
                         
                         weight_i = 2 ** bit_i / ((2 ** config.bit_resolution) - 1)
                         weight_j = 2 ** bit_j / ((2 ** config.bit_resolution) - 1)
@@ -321,7 +341,7 @@ def add_constraint_penalties(linear: np.ndarray, quadratic: np.ndarray,
 
 
 def _get_qubit_index(asset_idx: int, period_idx: int, bit_idx: int, 
-                     config: DynamicOptimizationConfig) -> int:
+                     config: DynamicOptimizationConfig, num_periods: int) -> int:
     """
     Calculate global qubit index from asset, period, and bit indices
     
@@ -334,12 +354,13 @@ def _get_qubit_index(asset_idx: int, period_idx: int, bit_idx: int,
         period_idx: Time period index  
         bit_idx: Bit index within asset allocation
         config: Optimization configuration
+        num_periods: Actual number of periods (not config.num_time_steps)
         
     Returns:
         Global qubit index
     """
     qubits_per_period = config.bit_resolution
-    qubits_per_asset = config.num_time_steps * qubits_per_period
+    qubits_per_asset = num_periods * qubits_per_period  # Use actual periods count
     
     return (asset_idx * qubits_per_asset + 
             period_idx * qubits_per_period + 
@@ -421,7 +442,7 @@ def build_hamiltonian_from_qubo(linear: np.ndarray, quadratic: np.ndarray, num_q
 
 
 def decode_quantum_solution(bitstring: str, config: DynamicOptimizationConfig, 
-                           num_assets: int) -> Dict[str, Dict[str, float]]:
+                           num_assets: int, num_periods: int) -> Dict[str, Dict[str, float]]:
     """
     Decode quantum bitstring solution to portfolio allocations
     
@@ -429,13 +450,14 @@ def decode_quantum_solution(bitstring: str, config: DynamicOptimizationConfig,
         bitstring: Quantum measurement result
         config: Optimization configuration  
         num_assets: Number of assets
+        num_periods: Number of periods in the optimization
         
     Returns:
         Dictionary mapping time_step -> {asset -> allocation}
     """
     allocations = {}
     
-    for period_idx in range(config.num_time_steps):
+    for period_idx in range(num_periods):
         period_key = f"time_step_{period_idx}"
         allocations[period_key] = {}
         
@@ -443,7 +465,7 @@ def decode_quantum_solution(bitstring: str, config: DynamicOptimizationConfig,
             # Extract bits for this asset in this period
             asset_bits = []
             for bit_idx in range(config.bit_resolution):
-                qubit_idx = _get_qubit_index(asset_idx, period_idx, bit_idx, config)
+                qubit_idx = _get_qubit_index(asset_idx, period_idx, bit_idx, config, num_periods)
                 if qubit_idx < len(bitstring):
                     asset_bits.append(bitstring[qubit_idx])
                 else:
@@ -474,10 +496,15 @@ def run_differential_evolution_vqe(ansatz, hamiltonian, config: DynamicOptimizat
     Returns:
         Optimization result with quantum solution
     """
+    import time
     from qiskit_aer import AerSimulator
     from qiskit_ibm_runtime import SamplerV2 as Sampler
     
+    start_time = time.time()
+    optimization_timeout = 60  # 1 minute maximum for VQE
+    
     print(f"[LOG] Starting Differential Evolution VQE: {config.num_generations} generations, {config.population_size} population")
+    print(f"[LOG] Optimization timeout set to {optimization_timeout} seconds")
     
     # Initialize quantum backend manager
     backend_manager = QuantumBackendManager()
@@ -513,6 +540,17 @@ def run_differential_evolution_vqe(ansatz, hamiltonian, config: DynamicOptimizat
         nonlocal job_count
         job_count += 1
         
+        # Check timeout to prevent infinite execution
+        if time.time() - start_time > optimization_timeout:
+            print(f"[LOG] Stopping optimization: timeout reached ({optimization_timeout}s)")
+            return 1e6  # Force termination with high cost
+        
+        # Enforce hard limit on job count to prevent runaway optimization
+        max_jobs = max(20, config.num_generations * config.population_size * 3)
+        if job_count > max_jobs:
+            print(f"[LOG] Stopping optimization: reached max jobs limit ({max_jobs})\"")
+            return 1e6  # Force termination with high cost
+        
         try:
             # Prepare parameterized circuit
             circuit = ansatz.assign_parameters(params)
@@ -537,15 +575,26 @@ def run_differential_evolution_vqe(ansatz, hamiltonian, config: DynamicOptimizat
             print(f"[LOG] Cost function error: {e}")
             return 1e6  # Return high cost on error
     
-    # Run Differential Evolution
+    # Run Differential Evolution (sequential for now due to pickle constraints)
+    # Note: Parallelization disabled temporarily due to local function pickle issue
+    print("[LOG] Running DE optimization with ultra-minimal parameters for speed")
+    
+    # Add strict limits to prevent runaway optimization
+    max_evaluations = max(10, config.num_generations * config.population_size * 2)  # Hard limit
+    
     result = differential_evolution(
         cost_function,
         bounds,
         maxiter=config.num_generations,
         popsize=config.population_size,
         recombination=config.recombination,
-        workers=1,  # Sequential for now
-        seed=42
+        workers=1,  # Sequential to avoid pickle issues
+        seed=42,
+        # Add convergence criteria for early stopping
+        tol=1e-3,  # Stop if improvement is less than this
+        atol=1e-6,  # Absolute tolerance
+        # Add callback to enforce hard limits
+        callback=lambda x, convergence: job_count >= max_evaluations
     )
     
     print(f"[LOG] DE-VQE complete: {job_count} evaluations, best cost = {result.fun:.4f}")
@@ -609,6 +658,56 @@ def compute_expectation_from_counts(counts: dict, hamiltonian: SparsePauliOp) ->
     return expectation
 
 
+def create_fast_test_result(periods_data: List[pd.DataFrame], total_qubits: int, config: DynamicOptimizationConfig = None) -> dict:
+    """
+    Create a fast test result using simple heuristics for ultra-fast development testing
+    
+    Returns a mock result that mimics the structure of real quantum optimization
+    """
+    print(f"[LOG] Fast test mode: {len(periods_data)} periods, {total_qubits} qubits")
+    
+    num_assets = periods_data[0].shape[1] 
+    num_periods = len(periods_data)
+    
+    # Simple equal allocation as test result in correct format
+    allocations = {}
+    for period_idx in range(num_periods):
+        # Equal weight allocation (normalized)
+        equal_weights = np.ones(num_assets) / num_assets
+        allocations[f"time_step_{period_idx}"] = {
+            f"asset_{asset_idx}": float(equal_weights[asset_idx]) 
+            for asset_idx in range(num_assets)
+        }
+    
+    # Mock performance metrics with all expected fields
+    mock_result = {
+        "success": True,
+        "allocations": allocations,
+        "objective_value": -0.5,  # Mock objective value (negative because it's a cost)
+        "quantum_jobs_executed": 1,  # Mock minimal quantum jobs
+        "solution_bitstring": "10" * (total_qubits // 2),  # Mock bitstring
+        "measurement_counts": {"11": 10, "00": 5},  # Mock measurement counts
+        "quantum_backend_used": "test_mode_simulator",
+        "configuration": config.__dict__ if config else {},  # Include the configuration
+        "expected_return": 0.08,  # Mock 8% return
+        "risk": 0.12,             # Mock 12% risk
+        "sharpe_ratio": 0.67,     # Mock Sharpe ratio
+        "total_qubits": total_qubits,
+        "quantum_cost": -0.5,     # Mock quantum cost
+        "classical_benchmark": {
+            "return": 0.07,
+            "risk": 0.15,
+            "sharpe": 0.47
+        },
+        "execution_time": 0.001,    # Ultra-fast execution
+        "optimization_method": "fast_test_mode",
+        "test_mode": True
+    }
+    
+    print(f"[LOG] Fast test result: {mock_result['expected_return']:.1%} return, {mock_result['risk']:.1%} risk")
+    return mock_result
+
+
 # Enhanced quantum optimization function
 def dynamic_quantum_optimize(prices: pd.DataFrame, config: DynamicOptimizationConfig,
                            previous_allocation: Optional[np.ndarray] = None,
@@ -637,6 +736,11 @@ def dynamic_quantum_optimize(prices: pd.DataFrame, config: DynamicOptimizationCo
     # Build enhanced QUBO
     linear, quadratic, total_qubits = build_dynamic_qubo(periods_data, config, previous_allocation)
     
+    # Fast test mode - skip quantum simulation and return mock result
+    if config.test_mode:
+        print("[LOG] TEST MODE: Using fast classical approximation")
+        return create_fast_test_result(periods_data, total_qubits, config)
+    
     # Convert to Hamiltonian  
     hamiltonian = build_hamiltonian_from_qubo(linear, quadratic, total_qubits)
     
@@ -653,7 +757,8 @@ def dynamic_quantum_optimize(prices: pd.DataFrame, config: DynamicOptimizationCo
     
     # Decode solution
     num_assets = periods_data[0].shape[1]
-    allocations = decode_quantum_solution(result['solution'], config, num_assets)
+    num_periods = len(periods_data)
+    allocations = decode_quantum_solution(result['solution'], config, num_assets, num_periods)
     
     # Prepare final result
     final_result = {
